@@ -1,0 +1,37 @@
+{
+  "name": "react19-app",
+  "version": "1.0.0",
+  "description": "A React 19 ready project with Server Functions (and Server Components if you need them) and TypeScript support (and Javascript).",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "concurrently \"webpack -w\" \"node --conditions react-server setup/server.js\"",
+    "start": "node --conditions react-server setup/server.js"
+  },
+  "keywords": [],
+  "author": "roggc",
+  "license": "MIT",
+  "dependencies": {
+    "@babel/core": "^7.27.1",
+    "@babel/plugin-transform-modules-commonjs": "^7.27.1",
+    "@babel/preset-react": "^7.27.1",
+    "@babel/preset-typescript": "^7.27.1",
+    "@babel/register": "^7.27.1",
+    "babel-loader": "^10.0.0",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "html-webpack-plugin": "^5.6.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-enhanced-suspense": "^4.0.2",
+    "react-server-dom-webpack": "^19.1.0",
+    "ts-loader": "^9.5.2",
+    "webpack": "^5.99.8",
+    "webpack-cli": "^6.0.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.5",
+    "concurrently": "^9.1.2"
+  }
+}
