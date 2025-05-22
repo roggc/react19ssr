@@ -6,6 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "concurrently \"webpack -w\" \"node --conditions react-server setup/server.js\"",
+    "dev-parse": "concurrently \"webpack -w\" \"node --conditions react-server setup/server-parse.js\"",
     "start": "node --conditions react-server setup/server.js"
   },
   "keywords": [],
@@ -25,6 +26,7 @@
     "react-dom": "^19.1.0",
     "react-enhanced-suspense": "^4.0.2",
     "react-server-dom-webpack": "^19.1.0",
+    "rsc-html-stream": "^0.0.6",
     "ts-loader": "^9.5.2",
     "webpack": "^5.99.8",
     "webpack-cli": "^6.0.1"
