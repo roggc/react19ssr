@@ -3,7 +3,7 @@ import {
   createFromFetch,
   createFromReadableStream,
 } from "react-server-dom-webpack/client";
-import { createRoot, hydrateRoot } from "react-dom/client";
+import { hydrateRoot } from "react-dom/client";
 
 const domElement = document.getElementById("root");
 if (!domElement) {
@@ -16,7 +16,7 @@ function Root() {
   let content = cache.get("home");
   if (!content) {
     if (window.__RSC_PAYLOAD) {
-      console.log("Using server-injected RSC payload:", window.__RSC_PAYLOAD);
+      console.log("Using server-injected RSC payload");
       try {
         const response = new Response(
           new ReadableStream({
@@ -43,7 +43,5 @@ function Root() {
   return <>{use(content)}</>;
 }
 
-// Render the app
-// const root = createRoot(domElement);
-// root.render(<Root />);
+// Hydrate the root element with the React app
 hydrateRoot(domElement, <Root />);

@@ -2,28 +2,11 @@ require("dotenv/config");
 const register = require("react-server-dom-webpack/node-register");
 const path = require("path");
 const { readFileSync, existsSync } = require("fs");
+const { renderToPipeableStream } = require("react-server-dom-webpack/server");
 const express = require("express");
 const React = require("react");
-const { PassThrough } = require("stream");
+const { spawn } = require("child_process");
 const babelRegister = require("@babel/register");
-
-// Try edge-compatible imports
-let renderToReadableStream, renderToPipeableStream;
-try {
-  renderToReadableStream =
-    require("react-dom/server.edge").renderToReadableStream;
-  renderToPipeableStream =
-    require("react-server-dom-webpack/server.edge").renderToPipeableStream;
-} catch (error) {
-  console.warn(
-    "Edge imports unavailable, falling back to server:",
-    error.message
-  );
-  renderToPipeableStream =
-    require("react-server-dom-webpack/server").renderToPipeableStream;
-}
-
-const { injectRSCPayload } = require("rsc-html-stream/server");
 
 register();
 babelRegister({
@@ -39,6 +22,36 @@ babelRegister({
 const app = express();
 
 app.use(express.static(path.resolve(process.cwd(), "public")));
+
+// Render HTML via child process
+async function renderAppToHtml() {
+  return new Promise((resolve, reject) => {
+    const child = spawn("node", [path.resolve(__dirname, "render-html.js")]);
+    let output = "";
+    let errorOutput = "";
+
+    child.stdout.on("data", (data) => (output += data));
+    child.stderr.on("data", (data) => (errorOutput += data));
+
+    child.on("close", (code) => {
+      if (code === 0) {
+        try {
+          const result = JSON.parse(output);
+          resolve(result.html);
+        } catch (error) {
+          reject(new Error(`Failed to parse child output: ${error.message}`));
+        }
+      } else {
+        try {
+          const errorResult = JSON.parse(errorOutput);
+          reject(new Error(errorResult.error));
+        } catch {
+          reject(new Error(`Child process failed: ${errorOutput}`));
+        }
+      }
+    });
+  });
+}
 
 app.get("/", async (req, res) => {
   try {
@@ -62,55 +75,95 @@ app.get("/", async (req, res) => {
     const appModule = require(appPath);
     const ReactApp = appModule.default ?? appModule;
 
+    // Read the client manifest for RSC
+    const manifestPath = path.resolve(
+      process.cwd(),
+      "public/react-client-manifest.json"
+    );
+    const manifest = readFileSync(manifestPath, "utf8");
+    const moduleMap = JSON.parse(manifest);
+
+    // Read the HTML template
+    const htmlTemplate = readFileSync(
+      path.resolve(process.cwd(), "index.html"),
+      "utf8"
+    );
+
+    // Render the app as an RSC stream
+    const { pipe } = renderToPipeableStream(
+      React.createElement(ReactApp),
+      moduleMap
+    );
+
+    const appHtml = await renderAppToHtml();
+
+    const { Writable } = require("stream");
+    class HtmlWritable extends Writable {
+      constructor() {
+        super();
+        this.chunks = [];
+      }
+      _write(chunk, encoding, callback) {
+        this.chunks.push(chunk);
+        callback();
+      }
+      end() {
+        const rscPayload = Buffer.concat(this.chunks).toString("utf8");
+        const html = htmlTemplate
+          .replace(
+            "<!--RSC_PAYLOAD-->",
+            `<script>window.__RSC_PAYLOAD = ${JSON.stringify(
+              rscPayload
+            )};</script>`
+          )
+          .replace(`<div id="root"></div>`, `<div id="root">${appHtml}</div>`);
+        res.setHeader("Content-Type", "text/html");
+        res.send(html);
+        super.end();
+      }
+    }
+
+    pipe(new HtmlWritable());
+  } catch (error) {
+    console.error("Error rendering React app:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+app.get("/react", (req, res) => {
+  try {
+    const possibleExtensions = [".tsx", ".ts", ".jsx", ".js"];
+    let appPath = null;
+
+    for (const ext of possibleExtensions) {
+      const candidatePath = path.resolve(process.cwd(), `src/app${ext}`);
+      if (existsSync(candidatePath)) {
+        appPath = candidatePath;
+        break;
+      }
+    }
+
+    if (!appPath) {
+      throw new Error(
+        "No app file found in src/ with supported extensions (.js, .jsx, .ts, .tsx)"
+      );
+    }
+
+    const appModule = require(appPath);
+    const ReactApp = appModule.default ?? appModule;
     const manifest = readFileSync(
       path.resolve(process.cwd(), "public/react-client-manifest.json"),
       "utf8"
     );
     const moduleMap = JSON.parse(manifest);
 
-    // Generate RSC payload
-    const rscStream = renderToPipeableStream(
+    const { pipe } = renderToPipeableStream(
       React.createElement(ReactApp),
       moduleMap
-    ).pipe(new PassThrough());
-
-    // Fork the RSC stream
-    const [rscStream1, rscStream2] = rscStream.tee();
-
-    // Render HTML stream (only if renderToReadableStream is available)
-    let htmlStream;
-    if (renderToReadableStream) {
-      const {
-        createFromReadableStream,
-      } = require("react-server-dom-webpack/client");
-      let data;
-      function Content() {
-        data ??= createFromReadableStream(rscStream1);
-        return React.use(data);
-      }
-      htmlStream = await renderToReadableStream(React.createElement(Content));
-    } else {
-      // Fallback: Read index.html and use minimal HTML
-      const htmlTemplate = readFileSync(
-        path.resolve(process.cwd(), "index.html"),
-        "utf8"
-      );
-      const appHtml = "<div>Loading...</div>"; // Minimal fallback
-      const htmlContent = htmlTemplate.replace(
-        `<div id="root"></div>`,
-        `<div id="root">${appHtml}</div>`
-      );
-      htmlStream = require("stream").Readable.from([htmlContent]);
-    }
-
-    // Inject RSC payload
-    const responseStream = htmlStream.pipeThrough(injectRSCPayload(rscStream2));
-
-    // Send response
-    res.setHeader("Content-Type", "text/html");
-    responseStream.pipe(res);
+    );
+    pipe(res);
   } catch (error) {
-    console.error("Error rendering React app:", error);
+    console.error("Error rendering RSC:", error);
     res.status(500).send("Internal Server Error");
   }
 });
