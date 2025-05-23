@@ -7,6 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "concurrently \"webpack -w\" \"node --conditions react-server setup/server.js\"",
     "dev-parse": "concurrently \"webpack -w\" \"node --conditions react-server setup/server-parse.js\"",
+    "dev-spawn": "concurrently \"webpack -w\" \"node --conditions react-server setup/my-server-spawn-v2.js\"",
     "start": "node --conditions react-server setup/server.js"
   },
   "keywords": [],
