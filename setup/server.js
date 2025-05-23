@@ -107,7 +107,7 @@ app.get(/^\/.*\/?$/, async (req, res) => {
 
     const appHtml = await renderAppToHtml(
       folderPath,
-      JSON.stringify(req.query)
+      JSON.stringify({ ...req.query })
     );
 
     const { Writable } = require("stream");

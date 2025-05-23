@@ -21,6 +21,8 @@ export default async function Page({
       <h1>Hello you!{params.jamil}</h1>
       <p>Welcome to your new Vite + React + TypeScript + Tailwind CSS app!</p>
       <Counter serverComponentJSX={<AnotherServerComponent />} />
+      <a href="/?jamil=baz">Change Jamil</a>
+      <a href="/home/rural?jamil=from rural">rural</a>
     </>
   );
 }
