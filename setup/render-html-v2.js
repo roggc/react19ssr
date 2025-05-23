@@ -68,39 +68,52 @@ const moduleMap = JSON.parse(manifest);
 //   return false;
 // }
 
-async function isClientComponent(type) {
-  // console.log("isClientComponent", type?.name || "Unknown");
+// async function isClientComponent(type) {
+//   // console.log("isClientComponent", type?.name || "Unknown");
+//   if (typeof type !== "function") {
+//     // console.log("isClientComponent: not a function");
+//     return false;
+//   }
+//   // Buscar en el manifiesto cualquier módulo con chunks (indica componente cliente)
+//   for (const module of Object.values(moduleMap)) {
+//     // console.log("isClientComponent: checking module", module.id);
+//     // Verificar si el nombre del componente coincide con el nombre del módulo
+//     const moduleName = module.id
+//       .split("/")
+//       .pop()
+//       .replace(/\.[^/.]+$/, ""); // Ejemplo: "counter" de "./src/counter.tsx"
+//     if (
+//       moduleName.toLowerCase() === type.name.toLowerCase() &&
+//       module.chunks?.length > 0
+//     ) {
+//       // console.log("isClientComponent: found client component", module.id);
+//       return true;
+//     }
+//   }
+//   // console.log("isClientComponent: moduleId not found, isClient false");
+//   return false;
+// }
+
+function isClientComponent(type) {
   if (typeof type !== "function") {
-    // console.log("isClientComponent: not a function");
     return false;
   }
-  // Buscar en el manifiesto cualquier módulo con chunks (indica componente cliente)
-  for (const module of Object.values(moduleMap)) {
-    // console.log("isClientComponent: checking module", module.id);
-    // Verificar si el nombre del componente coincide con el nombre del módulo
-    const moduleName = module.id
-      .split("/")
-      .pop()
-      .replace(/\.[^/.]+$/, ""); // Ejemplo: "counter" de "./src/counter.tsx"
-    if (
-      moduleName.toLowerCase() === type.name.toLowerCase() &&
-      module.chunks?.length > 0
-    ) {
-      // console.log("isClientComponent: found client component", module.id);
-      return true;
-    }
+  const isAsync =
+    type instanceof Object.getPrototypeOf(async function () {}).constructor;
+  if (isAsync) {
+    return false;
   }
-  // console.log("isClientComponent: moduleId not found, isClient false");
-  return false;
+  return true;
 }
 
 // Adapted renderJSXToClientJSX
 async function renderJSXToClientJSX(jsx, key = null) {
-  console.log("renderJSXToClientJSX", jsx, key);
   if (
     typeof jsx === "string" ||
     typeof jsx === "number" ||
     typeof jsx === "boolean" ||
+    typeof jsx === "function" ||
+    typeof jsx === "undefined" ||
     jsx == null
   ) {
     return jsx;
@@ -144,24 +157,10 @@ async function renderJSXToClientJSX(jsx, key = null) {
       } else if (typeof jsx.type === "function") {
         const Component = jsx.type;
         const props = jsx.props;
-        if (await isClientComponent(Component)) {
-          // Client component: serialize as placeholder
-          const module = Object.values(moduleMap).find(({ id }) => {
-            const moduleName = id
-              .split("/")
-              .pop()
-              .replace(/\.[^/.]+$/, "")
-              .toLowerCase();
-            return moduleName === Component.name.toLowerCase();
-          });
-          if (!module) {
-            throw new Error(
-              `No se encontró moduleId para el componente cliente: ${Component.name}`
-            );
-          }
+        if (isClientComponent(Component)) {
           return {
             $$typeof: Symbol.for("react.transitional.element"),
-            type: Component, // Usar moduleId como tipo para preservar el componente
+            type: Component,
             props: await renderJSXToClientJSX(props),
             key: key ?? jsx.key,
           };
@@ -171,18 +170,16 @@ async function renderJSXToClientJSX(jsx, key = null) {
           return await renderJSXToClientJSX(returnedJsx, key ?? jsx.key);
         }
       } else {
-        console.error("Unsupported JSX type:", jsx);
         throw new Error("Unsupported JSX type");
       }
     } else {
       // Process object props (e.g., { className: "foo" })
       return Object.fromEntries(
         await Promise.all(
-          Object.entries(jsx).map(async ([propName, value]) =>
-            typeof value === "function"
-              ? [propName, await renderJSXToClientJSX(null)]
-              : [propName, await renderJSXToClientJSX(value)]
-          )
+          Object.entries(jsx).map(async ([propName, value]) => [
+            propName,
+            await renderJSXToClientJSX(value),
+          ])
         )
       );
     }
@@ -195,7 +192,6 @@ async function renderJSXToClientJSX(jsx, key = null) {
 async function renderToHtml() {
   try {
     const clientJsx = await renderJSXToClientJSX(React.createElement(App));
-    // console.log("clientJsx", clientJsx);
     const html = renderToString(clientJsx);
     process.stdout.write(JSON.stringify({ html }));
   } catch (error) {
