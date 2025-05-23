@@ -15,6 +15,8 @@ const { existsSync } = require("fs");
 const possibleExtensions = [".tsx", ".jsx", ".js"];
 let appPath = null;
 const folderPath = process.argv[2];
+const params = JSON.parse(process.argv[3]) || {};
+
 for (const ext of possibleExtensions) {
   const candidatePath = path.resolve(
     process.cwd(),
@@ -133,7 +135,9 @@ async function renderJSXToClientJSX(jsx, key = null) {
 // Main function to render HTML
 async function renderToHtml() {
   try {
-    const clientJsx = await renderJSXToClientJSX(React.createElement(App));
+    const clientJsx = await renderJSXToClientJSX(
+      React.createElement(App, { params })
+    );
     const html = renderToString(clientJsx);
     process.stdout.write(JSON.stringify({ html }));
   } catch (error) {

@@ -23,11 +23,12 @@ const app = express();
 
 app.use(express.static(path.resolve(process.cwd(), "public")));
 // Render HTML via child process
-async function renderAppToHtml(folderPath) {
+async function renderAppToHtml(folderPath, params) {
   return new Promise((resolve, reject) => {
     const child = spawn("node", [
       path.resolve(__dirname, "render-html.js"),
       folderPath,
+      params,
     ]);
     let output = "";
     let errorOutput = "";
@@ -55,18 +56,13 @@ async function renderAppToHtml(folderPath) {
   });
 }
 
-app.use((req, res, next) => {
-  if (!req.url.endsWith("/") && req.url !== "/") {
-    req.url = `${req.url}/`;
-  }
-  next();
-});
-
 app.get(/^\/.*\/?$/, async (req, res) => {
   try {
     const possibleExtensions = [".tsx", ".jsx", ".js"];
     let appPath = null;
-    const folderPath = req.url;
+
+    const folderPath = req.path.endsWith("/") ? req.path : req.path + "/";
+
     for (const ext of possibleExtensions) {
       const candidatePath = path.resolve(
         process.cwd(),
@@ -105,11 +101,14 @@ app.get(/^\/.*\/?$/, async (req, res) => {
 
     // Render the app as an RSC stream
     const { pipe } = renderToPipeableStream(
-      React.createElement(ReactApp),
+      React.createElement(ReactApp, { params: req.query }),
       moduleMap
     );
 
-    const appHtml = await renderAppToHtml(folderPath);
+    const appHtml = await renderAppToHtml(
+      folderPath,
+      JSON.stringify(req.query)
+    );
 
     const { Writable } = require("stream");
     class HtmlWritable extends Writable {

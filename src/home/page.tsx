@@ -1,6 +1,6 @@
 "use client";
 
-export default function Home() {
+export default function Page() {
   return (
     <div>
       <h1>Welcome to Next.js!</h1>

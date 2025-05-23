@@ -10,11 +10,15 @@ const AnotherServerComponent = async function () {
   );
 };
 
-export default async function App() {
+export default async function Page({
+  params,
+}: {
+  params: { [key: string]: string | undefined };
+}) {
   await new Promise((resolve) => setTimeout(resolve, 1000));
   return (
     <>
-      <h1>Hello you!</h1>
+      <h1>Hello you!{params.jamil}</h1>
       <p>Welcome to your new Vite + React + TypeScript + Tailwind CSS app!</p>
       <Counter serverComponentJSX={<AnotherServerComponent />} />
     </>
