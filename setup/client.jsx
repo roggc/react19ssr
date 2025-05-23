@@ -11,9 +11,10 @@ if (!domElement) {
 }
 
 const cache = new Map();
+const route = window.location.href.replace(window.location.origin, "");
 
 function Root() {
-  let content = cache.get("home");
+  let content = cache.get(route);
   if (!content) {
     if (window.__RSC_PAYLOAD) {
       console.log("Using server-injected RSC payload");
@@ -31,13 +32,13 @@ function Root() {
         content = createFromReadableStream(response.body);
       } catch (error) {
         console.error("Error parsing RSC payload:", error);
-        content = createFromFetch(fetch("/react"));
+        content = createFromFetch(fetch("/____react____"));
       }
     } else {
-      console.log("Fetching RSC payload from /react");
-      content = createFromFetch(fetch("/react"));
+      console.log("Fetching RSC payload from /____react____");
+      content = createFromFetch(fetch("/____react____" + route));
     }
-    cache.set("home", content);
+    cache.set(route, content);
   }
 
   return <>{use(content)}</>;

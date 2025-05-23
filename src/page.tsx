@@ -16,6 +16,7 @@ export default async function Page({
   params: { [key: string]: string | undefined };
 }) {
   await new Promise((resolve) => setTimeout(resolve, 1000));
+
   return (
     <>
       <h1>Hello you!{params.jamil}</h1>

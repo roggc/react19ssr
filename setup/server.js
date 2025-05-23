@@ -22,6 +22,53 @@ babelRegister({
 const app = express();
 
 app.use(express.static(path.resolve(process.cwd(), "public")));
+
+app.get(/^\/____react____\/.*\/?$/, (req, res) => {
+  try {
+    const possibleExtensions = [".tsx", ".jsx", ".js"];
+    let appPath = null;
+    const folderPath = (
+      req.path.endsWith("/") ? req.path : req.path + "/"
+    ).replace("/____react____", "");
+
+    for (const ext of possibleExtensions) {
+      const candidatePath = path.resolve(
+        process.cwd(),
+        `src${folderPath}page${ext}`
+      );
+      if (existsSync(candidatePath)) {
+        appPath = candidatePath;
+        break;
+      }
+    }
+
+    if (!appPath) {
+      return res
+        .status(404)
+        .send(
+          `Page not found: No page file found in src${folderPath} with supported extensions (.js, .jsx, .tsx)`
+        );
+    }
+
+    const appModule = require(appPath);
+    const ReactApp = appModule.default ?? appModule;
+    const manifest = readFileSync(
+      path.resolve(process.cwd(), "public/react-client-manifest.json"),
+      "utf8"
+    );
+    const moduleMap = JSON.parse(manifest);
+
+    const { pipe } = renderToPipeableStream(
+      React.createElement(ReactApp, { params: { ...req.query } }),
+      moduleMap
+    );
+    pipe(res);
+  } catch (error) {
+    console.error("Error rendering RSC:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
 // Render HTML via child process
 async function renderAppToHtml(folderPath, params) {
   return new Promise((resolve, reject) => {

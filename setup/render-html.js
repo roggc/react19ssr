@@ -30,7 +30,7 @@ for (const ext of possibleExtensions) {
 
 if (!appPath) {
   throw new Error(
-    "No page file found in src/ with supported extensions (.js, .jsx, .tsx)"
+    `No page file found in src${folderPath} with supported extensions (.js, .jsx, .tsx)`
   );
 }
 
