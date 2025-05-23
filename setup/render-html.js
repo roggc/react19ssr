@@ -12,11 +12,14 @@ const React = require("react");
 const path = require("path");
 const { existsSync } = require("fs");
 
-const possibleExtensions = [".tsx", ".ts", ".jsx", ".js"];
+const possibleExtensions = [".tsx", ".jsx", ".js"];
 let appPath = null;
-
+const folderPath = process.argv[2];
 for (const ext of possibleExtensions) {
-  const candidatePath = path.resolve(process.cwd(), `src/app${ext}`);
+  const candidatePath = path.resolve(
+    process.cwd(),
+    `src${folderPath}page${ext}`
+  );
   if (existsSync(candidatePath)) {
     appPath = candidatePath;
     break;
@@ -25,7 +28,7 @@ for (const ext of possibleExtensions) {
 
 if (!appPath) {
   throw new Error(
-    "No app file found in src/ with supported extensions (.js, .jsx, .ts, .tsx)"
+    "No page file found in src/ with supported extensions (.js, .jsx, .tsx)"
   );
 }
 

@@ -21,10 +21,14 @@ babelRegister({
 
 const app = express();
 
+app.use(express.static(path.resolve(process.cwd(), "public")));
 // Render HTML via child process
-async function renderAppToHtml() {
+async function renderAppToHtml(folderPath) {
   return new Promise((resolve, reject) => {
-    const child = spawn("node", [path.resolve(__dirname, "render-html.js")]);
+    const child = spawn("node", [
+      path.resolve(__dirname, "render-html.js"),
+      folderPath,
+    ]);
     let output = "";
     let errorOutput = "";
 
@@ -51,13 +55,23 @@ async function renderAppToHtml() {
   });
 }
 
-app.get("/", async (req, res) => {
-  try {
-    const possibleExtensions = [".tsx", ".ts", ".jsx", ".js"];
-    let appPath = null;
+app.use((req, res, next) => {
+  if (!req.url.endsWith("/") && req.url !== "/") {
+    req.url = `${req.url}/`;
+  }
+  next();
+});
 
+app.get(/^\/.*\/?$/, async (req, res) => {
+  try {
+    const possibleExtensions = [".tsx", ".jsx", ".js"];
+    let appPath = null;
+    const folderPath = req.url;
     for (const ext of possibleExtensions) {
-      const candidatePath = path.resolve(process.cwd(), `src/app${ext}`);
+      const candidatePath = path.resolve(
+        process.cwd(),
+        `src${folderPath}page${ext}`
+      );
       if (existsSync(candidatePath)) {
         appPath = candidatePath;
         break;
@@ -65,9 +79,11 @@ app.get("/", async (req, res) => {
     }
 
     if (!appPath) {
-      throw new Error(
-        "No app file found in src/ with supported extensions (.js, .jsx, .ts, .tsx)"
-      );
+      return res
+        .status(404)
+        .send(
+          `Page not found: No page file found in src${folderPath} with supported extensions (.js, .jsx, .tsx)`
+        );
     }
 
     const appModule = require(appPath);
@@ -83,7 +99,7 @@ app.get("/", async (req, res) => {
 
     // Read the HTML template
     const htmlTemplate = readFileSync(
-      path.resolve(process.cwd(), "public/index.html"),
+      path.resolve(process.cwd(), "index.html"),
       "utf8"
     );
 
@@ -93,7 +109,7 @@ app.get("/", async (req, res) => {
       moduleMap
     );
 
-    const appHtml = await renderAppToHtml();
+    const appHtml = await renderAppToHtml(folderPath);
 
     const { Writable } = require("stream");
     class HtmlWritable extends Writable {
@@ -128,44 +144,5 @@ app.get("/", async (req, res) => {
   }
 });
 
-app.get("/react", (req, res) => {
-  try {
-    const possibleExtensions = [".tsx", ".ts", ".jsx", ".js"];
-    let appPath = null;
-
-    for (const ext of possibleExtensions) {
-      const candidatePath = path.resolve(process.cwd(), `src/app${ext}`);
-      if (existsSync(candidatePath)) {
-        appPath = candidatePath;
-        break;
-      }
-    }
-
-    if (!appPath) {
-      throw new Error(
-        "No app file found in src/ with supported extensions (.js, .jsx, .ts, .tsx)"
-      );
-    }
-
-    const appModule = require(appPath);
-    const ReactApp = appModule.default ?? appModule;
-    const manifest = readFileSync(
-      path.resolve(process.cwd(), "public/react-client-manifest.json"),
-      "utf8"
-    );
-    const moduleMap = JSON.parse(manifest);
-
-    const { pipe } = renderToPipeableStream(
-      React.createElement(ReactApp),
-      moduleMap
-    );
-    pipe(res);
-  } catch (error) {
-    console.error("Error rendering RSC:", error);
-    res.status(500).send("Internal Server Error");
-  }
-});
-
-app.use(express.static(path.resolve(process.cwd(), "public")));
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Listening on port ${port}`));
