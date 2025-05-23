@@ -20,7 +20,6 @@
     "babel-loader": "^10.0.0",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "html-webpack-plugin": "^5.6.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-enhanced-suspense": "^4.0.2",
