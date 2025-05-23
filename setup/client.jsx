@@ -3,7 +3,7 @@ import {
   createFromFetch,
   createFromReadableStream,
 } from "react-server-dom-webpack/client";
-import { createRoot } from "react-dom/client";
+import { createRoot, hydrateRoot } from "react-dom/client";
 
 const domElement = document.getElementById("root");
 if (!domElement) {
@@ -44,5 +44,6 @@ function Root() {
 }
 
 // Render the app
-const root = createRoot(domElement);
-root.render(<Root />);
+// const root = createRoot(domElement);
+// root.render(<Root />);
+hydrateRoot(domElement, <Root />);
