@@ -101,7 +101,7 @@ app.get(/^\/.*\/?$/, async (req, res) => {
 
     // Render the app as an RSC stream
     const { pipe } = renderToPipeableStream(
-      React.createElement(ReactApp, { params: req.query }),
+      React.createElement(ReactApp, { params: { ...req.query } }),
       moduleMap
     );
 
