@@ -1,5 +1,6 @@
 const path = require("path");
 const ReactServerWebpackPlugin = require("react-server-dom-webpack/plugin");
+const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 module.exports = {
   mode: "development",
@@ -27,7 +28,10 @@ module.exports = {
       },
     ],
   },
-  plugins: [new ReactServerWebpackPlugin({ isServer: false })],
+  plugins: [
+    new ReactServerWebpackPlugin({ isServer: false }),
+    new HtmlWebpackPlugin({ template: "index.html" }),
+  ],
   resolve: {
     extensions: [".js", ".jsx", ".ts", ".tsx"],
   },

@@ -21,8 +21,6 @@ babelRegister({
 
 const app = express();
 
-app.use(express.static(path.resolve(process.cwd(), "public")));
-
 // Render HTML via child process
 async function renderAppToHtml() {
   return new Promise((resolve, reject) => {
@@ -85,7 +83,7 @@ app.get("/", async (req, res) => {
 
     // Read the HTML template
     const htmlTemplate = readFileSync(
-      path.resolve(process.cwd(), "index.html"),
+      path.resolve(process.cwd(), "public/index.html"),
       "utf8"
     );
 
@@ -168,5 +166,6 @@ app.get("/react", (req, res) => {
   }
 });
 
+app.use(express.static(path.resolve(process.cwd(), "public")));
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Listening on port ${port}`));
