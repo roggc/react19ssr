@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, JSX, Suspense } from "react";
+import { useState, JSX, Suspense as ReactSuspense } from "react";
 // import Suspense from "react-enhanced-suspense";
 import serverFunction from "./server-function";
 
@@ -17,7 +17,9 @@ export default function Counter({
       <p>{count}</p>
       <button onClick={() => setCount(count + 1)}>Increment</button>
       {serverComponentJSX}
-      <Suspense fallback={<div>Loading...</div>}>{serverFunction()}</Suspense>
+      <ReactSuspense fallback={<div>Loading....</div>}>
+        {serverFunction()}
+      </ReactSuspense>
     </div>
   );
 }

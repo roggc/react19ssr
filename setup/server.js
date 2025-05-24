@@ -69,29 +69,22 @@ app.get(/^\/____react____\/.*\/?$/, (req, res) => {
   }
 });
 
-// Render HTML via child process
-async function renderAppToHtml(folderPath, params) {
+// Render HTML via child process, returning a stream
+async function renderAppToHtml(folderPath, paramsString) {
   return new Promise((resolve, reject) => {
     const child = spawn("node", [
       path.resolve(__dirname, "render-html.js"),
       folderPath,
-      params,
+      paramsString,
     ]);
-    let output = "";
-    let errorOutput = "";
 
-    child.stdout.on("data", (data) => (output += data));
-    child.stderr.on("data", (data) => (errorOutput += data));
+    let errorOutput = "";
+    child.stderr.on("data", (data) => {
+      errorOutput += data;
+    });
 
     child.on("close", (code) => {
-      if (code === 0) {
-        try {
-          const result = JSON.parse(output);
-          resolve(result.html);
-        } catch (error) {
-          reject(new Error(`Failed to parse child output: ${error.message}`));
-        }
-      } else {
+      if (code !== 0) {
         try {
           const errorResult = JSON.parse(errorOutput);
           reject(new Error(errorResult.error));
@@ -100,6 +93,9 @@ async function renderAppToHtml(folderPath, params) {
         }
       }
     });
+
+    // Devolver el stream directamente
+    resolve(child.stdout);
   });
 }
 
@@ -146,44 +142,72 @@ app.get(/^\/.*\/?$/, async (req, res) => {
       "utf8"
     );
 
-    // Render the app as an RSC stream
-    const { pipe } = renderToPipeableStream(
+    // Dividir la plantilla HTML en partes
+    const [htmlStart, htmlEnd] = htmlTemplate.split('<div id="root"></div>');
+
+    // Renderizar el RSC payload como stream
+    const { pipe: pipeRsc } = renderToPipeableStream(
       React.createElement(ReactApp, { params: { ...req.query } }),
       moduleMap
     );
 
-    const appHtml = await renderAppToHtml(
+    // Obtener el stream del subproceso
+    const appHtmlStream = await renderAppToHtml(
       folderPath,
       JSON.stringify({ ...req.query })
     );
 
-    const { Writable } = require("stream");
-    class HtmlWritable extends Writable {
-      constructor() {
-        super();
-        this.chunks = [];
-      }
-      _write(chunk, encoding, callback) {
-        this.chunks.push(chunk);
-        callback();
-      }
-      end() {
-        const rscPayload = Buffer.concat(this.chunks).toString("utf8");
-        const html = htmlTemplate
-          .replace(
-            "<!--RSC_PAYLOAD-->",
-            `<script>window.__RSC_PAYLOAD = ${JSON.stringify(
-              rscPayload
-            )};</script>`
-          )
-          .replace(`<div id="root"></div>`, `<div id="root">${appHtml}</div>`);
-        res.setHeader("Content-Type", "text/html");
-        res.send(html);
-        super.end();
-      }
-    }
+    // Configurar la respuesta como stream
+    res.setHeader("Content-Type", "text/html");
 
-    pipe(new HtmlWritable());
+    // Enviar el inicio del HTML
+    res.write(htmlStart);
+    res.write('<div id="root">');
+
+    // Pipe el stream del subproceso (HTML del componente)
+    // const logStream = createWriteStream("debug.html");
+    // appHtmlStream.pipe(logStream);
+    appHtmlStream.pipe(res, { end: false });
+    // let appHtml = "";
+    // appHtmlStream.on("data", (chunk) => {
+    //   appHtml += chunk.toString();
+    // });
+    // Cuando el stream del subproceso termine, continuar con el RSC payload y el final del HTML
+    appHtmlStream.on("end", () => {
+      // console.error("Captured appHtml:", appHtml);
+      // res.write(appHtml);
+      res.write("</div>");
+
+      // Capturar el RSC payload como string
+      let rscPayload = "";
+      const { Writable } = require("stream");
+      const rscWritable = new Writable({
+        write(chunk, encoding, callback) {
+          rscPayload += chunk.toString();
+          callback();
+        },
+      });
+
+      pipeRsc(rscWritable);
+
+      rscWritable.on("finish", () => {
+        // Inyectar el RSC payload como script
+        res.write(
+          `<script>window.__RSC_PAYLOAD = ${JSON.stringify(
+            rscPayload
+          )};</script>`
+        );
+
+        // Enviar el final del HTML
+        res.write(htmlEnd);
+        res.end();
+      });
+    });
+
+    appHtmlStream.on("error", (error) => {
+      console.error("Stream error:", error);
+      res.status(500).send("Internal Server Error");
+    });
   } catch (error) {
     console.error("Error rendering React app:", error);
     res.status(500).send("Internal Server Error");
