@@ -1,5 +1,7 @@
 "use client";
 
+import Suspense from "react-enhanced-suspense";
+
 export default function Page({
   params,
 }: {
@@ -7,8 +9,8 @@ export default function Page({
 }) {
   return (
     <div>
-      <h1>Welcome to the Rural Page!{params.jamil}</h1>
-      <p>This is a simple Next.js application.</p>
+      <h1>Welcome {params.name}!</h1>
+      <Suspense fallback={<div>Loading...</div>}></Suspense>
     </div>
   );
 }
