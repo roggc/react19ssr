@@ -11,12 +11,12 @@ export default async function Page({
 }) {
   //
   return (
-    <>
+    <div>
       <Suspense fallback={<div>Loading...</div>}>
         {new Promise((resolve) => setTimeout(() => resolve("Loaded"), 3000))}
       </Suspense>
       <h1>Hello you!</h1>
       <Counter serverComponentJSX={<ServerComponent />} />
-    </>
+    </div>
   );
 }
