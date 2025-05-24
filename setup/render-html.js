@@ -130,7 +130,7 @@ try {
 
   // Adapted renderJSXToClientJSX
   function renderJSXToClientJSX(jsx, key = null) {
-    // console.warn("renderJSXToClientJSX called with:", jsx, key);
+    console.warn("renderJSXToClientJSX called with:", jsx, key);
     if (
       typeof jsx === "string" ||
       typeof jsx === "number" ||
@@ -191,6 +191,7 @@ try {
           //     key: key ?? jsx.key,
           //   };
           // }
+          console.warn("Suspense element detected:", jsx);
           return {
             ...jsx,
             props: renderJSXToClientJSX(jsx.props),
@@ -294,6 +295,9 @@ try {
             // .pipe(new RemoveWrapperDivTransform())
             .pipe(process.stdout);
         },
+        bootstrapScripts: ["/main.js"],
+        // bootstrapModules: [],
+        // progressiveChunkSize: 0,
       });
     } catch (error) {
       process.stderr.write(JSON.stringify({ error: error.message }));
