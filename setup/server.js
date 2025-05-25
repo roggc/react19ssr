@@ -135,16 +135,19 @@ app.get(/^\/.*\/?$/, async (req, res) => {
     );
     const manifest = readFileSync(manifestPath, "utf8");
     const moduleMap = JSON.parse(manifest);
-
+    console.log(
+      "path to html",
+      path.resolve(process.cwd(), `src${folderPath}index.html`)
+    );
     // Read the HTML template
     const htmlTemplate = readFileSync(
-      path.resolve(process.cwd(), "index.html"),
+      path.resolve(process.cwd(), `src${folderPath}index.html`),
       "utf8"
     );
 
     // Dividir la plantilla HTML en partes
     const [htmlStart, htmlEnd] = htmlTemplate.split(
-      "<!-- ____app_placeholder____ -->"
+      "<!-- ____page_placeholder____ -->"
     );
 
     // Renderizar el RSC payload como stream
