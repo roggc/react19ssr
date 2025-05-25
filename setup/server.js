@@ -23,13 +23,13 @@ const app = express();
 
 app.use(express.static(path.resolve(process.cwd(), "public")));
 
-app.get(/^\/____react____\/.*\/?$/, (req, res) => {
+app.get(/^\/____rsc_payload____\/.*\/?$/, (req, res) => {
   try {
     const possibleExtensions = [".tsx", ".jsx", ".js"];
     let appPath = null;
     const folderPath = (
       req.path.endsWith("/") ? req.path : req.path + "/"
-    ).replace("/____react____", "");
+    ).replace("/____rsc_payload____", "");
 
     for (const ext of possibleExtensions) {
       const candidatePath = path.resolve(

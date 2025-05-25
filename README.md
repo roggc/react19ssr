@@ -1,14 +1,14 @@
 # Project ready to develop with React 19 (Typescript or Javascript) with SSR and multi-page file based routing
 
-This project can be created with **`npx create-react19-app@latest --ssr my-app`**.
+This project can be created with **`npx create-react19-app@latest my-app`**.
 
-This is a project ready to develop with **React 19**. Specifically with Server Components, Client Components, and Server Functions.
+This is a project ready to develop with **React 19**. Specifically with Server Functions and `Suspense`.
 
 This project is ready to develop either in **Typescript** or **Javascript**. If a `page.tsx` is found in a route folder, then it will take preference over a possible `page.jsx` or `page.js`. There must be at least a `page.tsx` or `page.jsx` (or `page.js`) in a route folder.
 
-With this project, you can build multi-page apps with file based routing, and with SSR. If you want a SPA without SSR then use the command above without the `--ssr` option: `npx create-react19-app@latest my-app`, and it will create a project like [this one](https://github.com/roggc/react19) instead.
+With this project, you can build multi-page apps with file based routing and SSR. If you want a SPA (Single Page Application) without SSR then use the command above with the option `--nossr`: `npx create-react19-app@latest --nossr my-app`, and it will create a project like [this one](https://github.com/roggc/react19) instead.
 
-The multi-page app is developed in the `src` folder. There must be a `page.tsx` (or `.jsx`, or `.js`) file in this folder. It corresponds to the root route (`localhost:3000` or `localhost:3000/`). If you create a `src/route1` folder with a `page.tsx` file in it, then you can access it from the browser with `localhost:3000/route1` or `localhost:3000/route1/`. And so on. For example a `src/route1/anotherroute` with a `page.tsx` (or `.jsx`, or `.js`) in it, can be accessed from the browser with `localhost:3000/route1/anotherroute` or with an ending slash. Or `src/route2` with `localhost:3000/route2`. It doesn't matter if they are nested or not, the important thing is that in each of these folders there exists a `page.tsx` file.
+The multi-page app is developed in the `src` folder. There must be a `page.tsx` (or `.jsx`, or `.js`) file in this folder and an `index.html` or `index.htm` file. It corresponds to the root route (`localhost:3000` or `localhost:3000/`). If you create a `src/route1` folder with a `page.tsx` file in it, then you can access it from the browser with `localhost:3000/route1` or `localhost:3000/route1/`. And so on. For example a `src/route1/anotherroute` with a `page.tsx` (or `.jsx`, or `.js`) in it, can be accessed from the browser with `localhost:3000/route1/anotherroute` or with an ending slash. Or `src/route2` with `localhost:3000/route2`. It doesn't matter if they are nested or not, the important thing is that in each of these folders there exists a `page.tsx` file.
 
 You can pass params to the routes: `localhost:3000/route1?foo=bar`. Then in your `page.tsx` you do:
 
