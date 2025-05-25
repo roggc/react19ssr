@@ -94,7 +94,7 @@ async function renderAppToHtml(folderPath, paramsString) {
       }
     });
 
-    // Devolver el stream directamente
+    // Resolve the stream from the child process
     resolve(child.stdout);
   });
 }
@@ -135,20 +135,12 @@ app.get(/^\/.*\/?$/, async (req, res) => {
     );
     const manifest = readFileSync(manifestPath, "utf8");
     const moduleMap = JSON.parse(manifest);
-    console.log(
-      "path to html",
-      path.resolve(process.cwd(), `src${folderPath}index.html`)
-    );
+
     // Read the HTML template
     const htmlTemplate = readFileSync(
       path.resolve(process.cwd(), `src${folderPath}index.html`),
       "utf8"
     );
-
-    // Dividir la plantilla HTML en partes
-    // const [htmlStart, htmlEnd] = htmlTemplate.split(
-    //   "<!-- ____page_placeholder____ -->"
-    // );
 
     const bodyStartIndex = htmlTemplate.indexOf("<body");
     const bodyOpenEndIndex = htmlTemplate.indexOf(">", bodyStartIndex) + 1;
@@ -163,40 +155,30 @@ app.get(/^\/.*\/?$/, async (req, res) => {
     const htmlStart = htmlTemplate.slice(0, bodyOpenEndIndex);
     const htmlEnd = htmlTemplate.slice(bodyCloseIndex);
 
-    // Renderizar el RSC payload como stream
+    // Render RSC payload as a stream
     const { pipe: pipeRsc } = renderToPipeableStream(
       React.createElement(ReactApp, { params: { ...req.query } }),
       moduleMap
     );
 
-    // Obtener el stream del subproceso
+    // Get the stream from the child process
     const appHtmlStream = await renderAppToHtml(
       folderPath,
       JSON.stringify({ ...req.query })
     );
 
-    // Configurar la respuesta como stream
+    // Set headers for the response
     res.setHeader("Content-Type", "text/html");
 
-    // Enviar el inicio del HTML
+    // Send the start of the HTML
     res.write(htmlStart);
-    // res.write('<div id="root">');
 
-    // Pipe el stream del subproceso (HTML del componente)
-    // const logStream = createWriteStream("debug.html");
-    // appHtmlStream.pipe(logStream);
+    // Pipe the stream from the child process (HTML of the component)
     appHtmlStream.pipe(res, { end: false });
-    // let appHtml = "";
-    // appHtmlStream.on("data", (chunk) => {
-    //   appHtml += chunk.toString();
-    // });
-    // Cuando el stream del subproceso termine, continuar con el RSC payload y el final del HTML
-    appHtmlStream.on("end", () => {
-      // console.error("Captured appHtml:", appHtml);
-      // res.write(appHtml);
-      // res.write("</div>");
 
-      // Capturar el RSC payload como string
+    // When the child process stream ends, continue with the RSC payload and the end of the HTML
+    appHtmlStream.on("end", () => {
+      // Capture the RSC payload as a string
       let rscPayload = "";
       const { Writable } = require("stream");
       const rscWritable = new Writable({
@@ -209,14 +191,14 @@ app.get(/^\/.*\/?$/, async (req, res) => {
       pipeRsc(rscWritable);
 
       rscWritable.on("finish", () => {
-        // Inyectar el RSC payload como script
+        // Inject the RSC payload as a script
         res.write(
           `<script>window.__RSC_PAYLOAD = ${JSON.stringify(
             rscPayload
           )};</script>`
         );
 
-        // Enviar el final del HTML
+        // Send the end of the HTML
         res.write(htmlEnd);
         res.end();
       });

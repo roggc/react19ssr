@@ -11,80 +11,6 @@ const { renderToPipeableStream } = require("react-dom/server");
 const React = require("react");
 const path = require("path");
 const { existsSync } = require("fs");
-const { Transform } = require("stream");
-
-class RemoveWrapperDivTransform extends Transform {
-  constructor() {
-    super();
-    this.divDepth = 0; // Contador de anidación de divs
-    this.isWrapperDivRemoved = false; // Bandera para el div inicial
-    this.buffer = ""; // Buffer para manejar etiquetas divididas entre chunks
-  }
-
-  _transform(chunk, encoding, callback) {
-    this.buffer += chunk.toString();
-    let output = "";
-    let i = 0;
-
-    while (i < this.buffer.length) {
-      // Buscar etiquetas <div> o </div>
-      if (this.buffer[i] === "<") {
-        if (this.buffer.startsWith("<div", i)) {
-          // Posible div inicial
-          const divEnd = this.buffer.indexOf(">", i);
-          if (divEnd === -1) {
-            // Etiqueta incompleta, esperar más datos
-            break;
-          }
-          const divTag = this.buffer.slice(i, divEnd + 1);
-          if (divTag.includes("____rendertopipeablestreamfix____")) {
-            // Encontramos el div envolvente
-            if (!this.isWrapperDivRemoved) {
-              this.isWrapperDivRemoved = true;
-              i = divEnd + 1; // Saltar la etiqueta
-              continue;
-            }
-          }
-          // Incrementar contador para cualquier div
-          this.divDepth++;
-          output += divTag;
-          i = divEnd + 1;
-        } else if (this.buffer.startsWith("</div>", i)) {
-          // Div de cierre
-          if (this.isWrapperDivRemoved && this.divDepth === 1) {
-            // Este es el </div> del wrapper, omitirlo
-            this.divDepth--;
-            i += 6; // Saltar </div>
-            continue;
-          }
-          this.divDepth--;
-          output += "</div>";
-          i += 6;
-        } else {
-          // Otra etiqueta, pasar sin cambios
-          output += this.buffer[i];
-          i++;
-        }
-      } else {
-        output += this.buffer[i];
-        i++;
-      }
-    }
-    // Actualizar buffer con datos no procesados
-    this.buffer = this.buffer.slice(i);
-    this.push(output);
-    callback();
-  }
-
-  _flush(callback) {
-    // Enviar cualquier dato restante en el buffer
-    if (this.buffer) {
-      this.push(this.buffer);
-      this.buffer = "";
-    }
-    callback();
-  }
-}
 
 try {
   function getApp() {
@@ -128,9 +54,7 @@ try {
     return true;
   }
 
-  // Adapted renderJSXToClientJSX
   function renderJSXToClientJSX(jsx, key = null) {
-    console.warn("renderJSXToClientJSX called with:", jsx, key);
     if (
       typeof jsx === "string" ||
       typeof jsx === "number" ||
@@ -141,19 +65,12 @@ try {
     ) {
       return jsx;
     } else if (Array.isArray(jsx)) {
-      // console.warn("array jsx detected:", jsx);
       return jsx.map((child, i) =>
         renderJSXToClientJSX(
           child,
           i + (typeof child?.type === "string" ? "_" + child?.type : "")
         )
       );
-      // return jsx.map((child, i) => ({
-      //   $$typeof: Symbol.for("react.transitional.element"),
-      //   type: Symbol.for("react.fragment"),
-      //   props: { children: renderJSXToClientJSX(child) },
-      //   key: i + (typeof child?.type === "string" ? "_" + child?.type : ""),
-      // }));
     } else if (typeof jsx === "symbol") {
       if (jsx === Symbol.for("react.fragment")) {
         // Handle Fragment as an empty props object
@@ -168,30 +85,13 @@ try {
       throw new Error(`Unsupported symbol: ${String(jsx)}`);
     } else if (typeof jsx === "object") {
       if (jsx.$$typeof === Symbol.for("react.transitional.element")) {
-        // console.log("Transitional element detected:", jsx);
         if (jsx.type === Symbol.for("react.fragment")) {
-          // console.warn("jsx.props", jsx.props);
           return {
             ...jsx,
             props: renderJSXToClientJSX(jsx.props),
             key: key ?? jsx.key,
           };
         } else if (jsx.type === Symbol.for("react.suspense")) {
-          // const { fallback, children } = jsx.props;
-          // if (children instanceof Promise) {
-          //   console.warn("Suspense children is a Promise, awaiting...");
-          //   return {
-          //     ...jsx,
-          //     props: {
-          //       fallback: renderJSXToClientJSX(fallback),
-          //       children: children.then((resolvedChildren) =>
-          //         renderJSXToClientJSX(resolvedChildren)
-          //       ),
-          //     },
-          //     key: key ?? jsx.key,
-          //   };
-          // }
-          console.warn("Suspense element detected:", jsx);
           return {
             ...jsx,
             props: renderJSXToClientJSX(jsx.props),
@@ -217,12 +117,6 @@ try {
           } else {
             // Server component: execute and process
             const returnedJsx = Component(props);
-            // if (returnedJsx instanceof Promise) {
-            //   console.warn(`Server Component returned a Promise`);
-            //   return returnedJsx.then((resolvedJsx) =>
-            //     renderJSXToClientJSX(resolvedJsx, key ?? jsx.key)
-            //   );
-            // }
             return renderJSXToClientJSX(returnedJsx, key ?? jsx.key);
           }
         } else {
@@ -230,44 +124,14 @@ try {
           throw new Error("Unsupported JSX type");
         }
       } else if (jsx instanceof Promise) {
-        console.warn("Received a Promise in JSX", jsx);
-        // return await renderJSXToClientJSX(await jsx, key);
         return jsx;
-        return Promise.race([
-          jsx.then((resolvedJsx) => {
-            console.warn("Resolved JSX:", resolvedJsx);
-            return resolvedJsx;
-            if (
-              typeof resolvedJsx === "object" &&
-              resolvedJsx !== null &&
-              !Array.isArray(resolvedJsx) &&
-              !(resolvedJsx instanceof Promise) &&
-              resolvedJsx.$$typeof ===
-                Symbol.for("react.transitional.element") &&
-              resolvedJsx.type === Symbol.for("react.fragment")
-            ) {
-              // Handle object props
-              // return renderJSXToClientJSX(resolvedJsx, key);
-              // return resolvedJsx;
-              console.warn("converting resolved JSX to div");
-              const newJSX = { ...resolvedJsx, type: "div" };
-              console.warn("New JSX:", newJSX);
-              return newJSX;
-            }
-            console.warn("Returning resolved JSX from Promise:", resolvedJsx);
-            return resolvedJsx;
-          }),
-          new Promise((resolve) => setTimeout(() => resolve(jsx))),
-        ]);
       } else {
         // Process object props (e.g., { className: "foo" })
         return Object.fromEntries(
-          // Promise.all(
           Object.entries(jsx).map(([propName, value]) => [
             propName,
             renderJSXToClientJSX(value),
           ])
-          // )
         );
       }
     } else {
@@ -275,7 +139,7 @@ try {
     }
   }
 
-  // Renderizar el componente como stream
+  // Render the app to a stream
   async function renderToStream() {
     try {
       const { App, params } = getApp();
@@ -287,44 +151,15 @@ try {
         )
       );
 
-      // const clientJsx = renderJSXToClientJSX(
-      //   React.createElement(React.Suspense, {
-      //     fallback: undefined, //React.createElement("div", null, "Loading..."),
-      //     children: renderJSXToClientJSX(
-      //       React.createElement("div", {
-      //         children: React.createElement(App, { params }),
-      //       })
-      //     ),
-      //   })
-      // );
-      // const clientJsx = renderJSXToClientJSX(
-      //   React.createElement(React.Suspense, {
-      //     fallback: undefined, //React.createElement("div", null, "Loading..."),
-      //     children: React.createElement("div", {
-      //       children: React.createElement(App, { params }),
-      //       ____rendertopipeablestreamfix____: "true", // Example of adding a custom prop
-      //     }),
-      //   })
-      // );
-
-      // console.log("Client JSX:", clientJsx);
       const stream = renderToPipeableStream(clientJsx, {
         onError(error) {
           console.error("Render error:", error);
           process.stderr.write(JSON.stringify({ error: error.message }));
         },
-        // onAllReady() {
-        //   // Enviar el stream a stdout
-        //   stream.pipe(process.stdout);
-        // },
         onShellReady() {
-          stream
-            // .pipe(new RemoveWrapperDivTransform())
-            .pipe(process.stdout);
+          stream.pipe(process.stdout);
         },
         bootstrapScripts: ["/main.js"],
-        // bootstrapModules: [],
-        // progressiveChunkSize: 0,
       });
     } catch (error) {
       process.stderr.write(JSON.stringify({ error: error.message }));
