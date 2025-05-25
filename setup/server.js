@@ -143,7 +143,9 @@ app.get(/^\/.*\/?$/, async (req, res) => {
     );
 
     // Dividir la plantilla HTML en partes
-    const [htmlStart, htmlEnd] = htmlTemplate.split('<div id="root"></div>');
+    const [htmlStart, htmlEnd] = htmlTemplate.split(
+      "<!-- ____app_placeholder____ -->"
+    );
 
     // Renderizar el RSC payload como stream
     const { pipe: pipeRsc } = renderToPipeableStream(
@@ -162,7 +164,7 @@ app.get(/^\/.*\/?$/, async (req, res) => {
 
     // Enviar el inicio del HTML
     res.write(htmlStart);
-    res.write('<div id="root">');
+    // res.write('<div id="root">');
 
     // Pipe el stream del subproceso (HTML del componente)
     // const logStream = createWriteStream("debug.html");
@@ -176,7 +178,7 @@ app.get(/^\/.*\/?$/, async (req, res) => {
     appHtmlStream.on("end", () => {
       // console.error("Captured appHtml:", appHtml);
       // res.write(appHtml);
-      res.write("</div>");
+      // res.write("</div>");
 
       // Capturar el RSC payload como string
       let rscPayload = "";

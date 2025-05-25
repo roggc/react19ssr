@@ -90,8 +90,8 @@ try {
   function getApp() {
     const possibleExtensions = [".tsx", ".jsx", ".js"];
     let appPath = null;
-    const folderPath = process.argv[2];
-    const params = JSON.parse(process.argv[3]);
+    const folderPath = "/" || process.argv[2];
+    const params = {} || JSON.parse(process.argv[3]);
 
     for (const ext of possibleExtensions) {
       const candidatePath = path.resolve(
@@ -232,7 +232,6 @@ try {
       } else if (jsx instanceof Promise) {
         console.warn("Received a Promise in JSX", jsx);
         // return await renderJSXToClientJSX(await jsx, key);
-        return jsx;
         return Promise.race([
           jsx.then((resolvedJsx) => {
             console.warn("Resolved JSX:", resolvedJsx);
@@ -278,54 +277,26 @@ try {
   // Renderizar el componente como stream
   async function renderToStream() {
     try {
-      const { App, params } = getApp();
-      const clientJsx = renderJSXToClientJSX(
+      const stream = renderToPipeableStream(
         React.createElement(
-          "div",
-          { id: "root" },
-          React.createElement(App, { params })
-        )
+          React.Fragment,
+          null,
+          React.createElement(
+            React.Suspense,
+            null,
+            new Promise((resolve) => setTimeout(resolve, 2000))
+          )
+        ),
+        {
+          onError(error) {
+            console.error("Render error:", error);
+            process.stderr.write(JSON.stringify({ error: error.message }));
+          },
+          onShellReady() {
+            stream.pipe(process.stdout);
+          },
+        }
       );
-
-      // const clientJsx = renderJSXToClientJSX(
-      //   React.createElement(React.Suspense, {
-      //     fallback: undefined, //React.createElement("div", null, "Loading..."),
-      //     children: renderJSXToClientJSX(
-      //       React.createElement("div", {
-      //         children: React.createElement(App, { params }),
-      //       })
-      //     ),
-      //   })
-      // );
-      // const clientJsx = renderJSXToClientJSX(
-      //   React.createElement(React.Suspense, {
-      //     fallback: undefined, //React.createElement("div", null, "Loading..."),
-      //     children: React.createElement("div", {
-      //       children: React.createElement(App, { params }),
-      //       ____rendertopipeablestreamfix____: "true", // Example of adding a custom prop
-      //     }),
-      //   })
-      // );
-
-      // console.log("Client JSX:", clientJsx);
-      const stream = renderToPipeableStream(clientJsx, {
-        onError(error) {
-          console.error("Render error:", error);
-          process.stderr.write(JSON.stringify({ error: error.message }));
-        },
-        // onAllReady() {
-        //   // Enviar el stream a stdout
-        //   stream.pipe(process.stdout);
-        // },
-        onShellReady() {
-          stream
-            // .pipe(new RemoveWrapperDivTransform())
-            .pipe(process.stdout);
-        },
-        bootstrapScripts: ["/main.js"],
-        // bootstrapModules: [],
-        // progressiveChunkSize: 0,
-      });
     } catch (error) {
       process.stderr.write(JSON.stringify({ error: error.message }));
       process.exit(1);

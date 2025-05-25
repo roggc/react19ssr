@@ -2,6 +2,7 @@
 
 import Suspense from "react-enhanced-suspense";
 import { Suspense as ReactSuspense } from "react";
+import Counter from "./counter";
 
 export default function Page({
   params,
@@ -18,6 +19,7 @@ export default function Page({
           )
         }
       </Suspense>
+      <Counter />
     </div>
   );
 }
