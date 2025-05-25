@@ -81,7 +81,7 @@ export default async function Page() {
 }
 ```
 
-This is terrible, because content will not show until 8 seconds, so for 8 seconds the user will see a blank screen in the page. So the technique to fetch data in a Server Component must be avoided if not necessary because it increases a lot the First Contentful Paint (FCP), that is, when the user sees something.
+This is terrible, because content will not show until 8 seconds, so for 8 seconds the user will see a blank screen in the page. So the technique to fetch data in the function body of a Server Component must be avoided if not necessary because it increases a lot the First Contentful Paint (FCP), that is, when the user sees something.
 
 Then if you do not fetch data in a Server Component the utility of it is doubtful. You can opt in for a Client component instead:
 
@@ -113,7 +113,7 @@ export default function () {
 
 As you can see, the `serverFunction` returns a promise and doesn't `await` for it to resolve (this is important).
 
-The only reason for what it would be necessary to fetch data on a Server Component in the way showed above would be if this data is necessary for SEO purposes. But as I say, it blocks the rendering of the page for a certain amount of time.
+The only reason for what it would be necessary to fetch data in the function body of a Server Component would be if this data is necessary for SEO purposes. But as I say, it blocks the rendering of the page for a certain amount of time.
 
 ## The `setup` folder
 
@@ -121,7 +121,7 @@ The `setup` folder has the `server.js`, `client.jsx`, and `render-html.js` files
 
 The `server.js` file is the starting point of the app. It is executed by `node`. It defines an endpoint with a regex (regular expression) to capture all the `get` requests made to the app. Its purpose is to serve the `index.html` file found at each route directory of the project. Before sending this file to the Client it renders the page into html in a separate process and injects this html into the html file. The reason why the server side rendering to html of the component found at `page.tsx` is done in a separate process it's because incompatibilities of use of the `renderToPipeableStream` API from `react-dom/server` in a Server Components environment.
 
-In this rendering to html of the page component in the server, Server Components must be processed first (because they are regular functions that can and should be called). So there is a utility function that does this processing and gets as a result a `JSX` that can be passed to `renderToPipeableStream` method. It's because of this that the implementation need a way to know when a component it's a Server Component or not, and that way is if they are `async` functions. So for this reason, when you define a Server Component in this implementation (without `"use client"`), use always an `async` function, no matter if you use `await` or not.
+In this rendering to html of the page component in the server, Server Components must be processed first (because they are regular functions that can and should be called). So there is a utility function that does this processing and gets as a result a `JSX` that can be passed to `renderToPipeableStream` method. It's because of this that the implementation need a way to know when a component it's a Server Component or not, and that way is if they are `async` functions. So for this reason, when you define a Server Component in this implementation use always an `async` function, no matter if you use `await` or not.
 
 The `server.js` file defines another endpoint, with a regular expression too. Its purpose is to serve the RSC payload to the Client for hydration.
 
