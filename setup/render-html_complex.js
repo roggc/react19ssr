@@ -32,7 +32,7 @@ try {
 
     if (!appPath) {
       throw new Error(
-        `No "page" file found in "src${folderPath}" with supported extensions (.js, .jsx, .tsx)`
+        `No page file found in src${folderPath} with supported extensions (.js, .jsx, .tsx)`
       );
     }
 
@@ -142,27 +142,7 @@ try {
   // Render the app to a stream
   async function renderToStream() {
     try {
-      let App, params;
-      try {
-        ({ App: myApp, params: myParams } = getApp());
-        App = myApp;
-        params = myParams;
-      } catch (error) {
-        const stream = renderToPipeableStream(
-          React.createElement("div", null, error.message),
-          {
-            onError(error) {
-              console.error("Render error:", error);
-              process.stderr.write(JSON.stringify({ error: error.message }));
-            },
-            onShellReady() {
-              stream.pipe(process.stdout);
-            },
-          }
-        );
-        return;
-      }
-
+      const { App, params } = getApp();
       const clientJsx = renderJSXToClientJSX(
         React.createElement(
           "div",

@@ -43,15 +43,11 @@ app.get(/^\/____react____\/.*\/?$/, (req, res) => {
     }
 
     if (!appPath) {
-      const { pipe } = renderToPipeableStream(
-        React.createElement(
-          "div",
-          null,
-          `Page not found: No "page" file found in "src${folderPath}" with supported extensions (.js, .jsx, .tsx)`
-        )
-      );
-      pipe(res);
-      return;
+      return res
+        .status(404)
+        .send(
+          `Page not found: No page file found in src${folderPath} with supported extensions (.js, .jsx, .tsx)`
+        );
     }
 
     const appModule = require(appPath);
@@ -105,32 +101,46 @@ async function renderAppToHtml(folderPath, paramsString) {
 
 app.get(/^\/.*\/?$/, async (req, res) => {
   try {
-    const possibleExtensions = [".html", ".htm"];
-    let htmlPath = null;
+    const possibleExtensions = [".tsx", ".jsx", ".js"];
+    let appPath = null;
 
     const folderPath = req.path.endsWith("/") ? req.path : req.path + "/";
 
     for (const ext of possibleExtensions) {
       const candidatePath = path.resolve(
         process.cwd(),
-        `src${folderPath}index${ext}`
+        `src${folderPath}page${ext}`
       );
       if (existsSync(candidatePath)) {
-        htmlPath = candidatePath;
+        appPath = candidatePath;
         break;
       }
     }
 
-    if (!htmlPath) {
+    if (!appPath) {
       return res
         .status(404)
         .send(
-          `Page not found: No "index" file found in src${folderPath} with supported extensions (.html, .htm)`
+          `Page not found: No page file found in src${folderPath} with supported extensions (.js, .jsx, .tsx)`
         );
     }
 
+    const appModule = require(appPath);
+    const ReactApp = appModule.default ?? appModule;
+
+    // Read the client manifest for RSC
+    const manifestPath = path.resolve(
+      process.cwd(),
+      "public/react-client-manifest.json"
+    );
+    const manifest = readFileSync(manifestPath, "utf8");
+    const moduleMap = JSON.parse(manifest);
+
     // Read the HTML template
-    const htmlTemplate = readFileSync(htmlPath, "utf8");
+    const htmlTemplate = readFileSync(
+      path.resolve(process.cwd(), `src${folderPath}index.html`),
+      "utf8"
+    );
 
     const bodyStartIndex = htmlTemplate.indexOf("<body");
     const bodyOpenEndIndex = htmlTemplate.indexOf(">", bodyStartIndex) + 1;
@@ -140,12 +150,16 @@ app.get(/^\/.*\/?$/, async (req, res) => {
       bodyOpenEndIndex === -1 ||
       bodyCloseIndex === -1
     ) {
-      return res
-        .status(500)
-        .send(`No "body" opening and/or closing tags found in HTML template`);
+      throw new Error("No <body> and </body> tags found in HTML template");
     }
     const htmlStart = htmlTemplate.slice(0, bodyOpenEndIndex);
     const htmlEnd = htmlTemplate.slice(bodyCloseIndex);
+
+    // Render RSC payload as a stream
+    const { pipe: pipeRsc } = renderToPipeableStream(
+      React.createElement(ReactApp, { params: { ...req.query } }),
+      moduleMap
+    );
 
     // Get the stream from the child process
     const appHtmlStream = await renderAppToHtml(
@@ -162,11 +176,32 @@ app.get(/^\/.*\/?$/, async (req, res) => {
     // Pipe the stream from the child process (HTML of the component)
     appHtmlStream.pipe(res, { end: false });
 
-    // When the child process stream finishes send the rest of the HTML
-    appHtmlStream.on("finish", () => {
-      // Send the end of the HTML
-      res.write(htmlEnd);
-      res.end();
+    // When the child process stream ends, continue with the RSC payload and the end of the HTML
+    appHtmlStream.on("end", () => {
+      // Capture the RSC payload as a string
+      let rscPayload = "";
+      const { Writable } = require("stream");
+      const rscWritable = new Writable({
+        write(chunk, encoding, callback) {
+          rscPayload += chunk.toString();
+          callback();
+        },
+      });
+
+      pipeRsc(rscWritable);
+
+      rscWritable.on("finish", () => {
+        // Inject the RSC payload as a script
+        res.write(
+          `<script>window.__RSC_PAYLOAD = ${JSON.stringify(
+            rscPayload
+          )};</script>`
+        );
+
+        // Send the end of the HTML
+        res.write(htmlEnd);
+        res.end();
+      });
     });
 
     appHtmlStream.on("error", (error) => {
