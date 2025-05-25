@@ -1,7 +1,7 @@
 {
   "name": "react19-app",
   "version": "1.0.0",
-  "description": "A React 19 ready project with Server Functions (and Server Components if you need them) and TypeScript support (and Javascript).",
+  "description": "A multi-page SSR React 19 ready project with Server Functions (and Server Components if you want) and TypeScript support (and JavaScript).",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
