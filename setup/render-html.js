@@ -140,7 +140,7 @@ try {
   }
 
   // Render the app to a stream
-  async function renderToStream() {
+  function renderToStream() {
     try {
       let App, params;
       try {

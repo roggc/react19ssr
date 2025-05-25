@@ -74,7 +74,7 @@ app.get(/^\/____react____\/.*\/?$/, (req, res) => {
 });
 
 // Render HTML via child process, returning a stream
-async function renderAppToHtml(folderPath, paramsString) {
+function renderAppToHtml(folderPath, paramsString) {
   return new Promise((resolve, reject) => {
     const child = spawn("node", [
       path.resolve(__dirname, "render-html.js"),
