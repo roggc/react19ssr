@@ -146,9 +146,22 @@ app.get(/^\/.*\/?$/, async (req, res) => {
     );
 
     // Dividir la plantilla HTML en partes
-    const [htmlStart, htmlEnd] = htmlTemplate.split(
-      "<!-- ____page_placeholder____ -->"
-    );
+    // const [htmlStart, htmlEnd] = htmlTemplate.split(
+    //   "<!-- ____page_placeholder____ -->"
+    // );
+
+    const bodyStartIndex = htmlTemplate.indexOf("<body");
+    const bodyOpenEndIndex = htmlTemplate.indexOf(">", bodyStartIndex) + 1;
+    const bodyCloseIndex = htmlTemplate.indexOf("</body>");
+    if (
+      bodyStartIndex === -1 ||
+      bodyOpenEndIndex === -1 ||
+      bodyCloseIndex === -1
+    ) {
+      throw new Error("No <body> and </body> tags found in HTML template");
+    }
+    const htmlStart = htmlTemplate.slice(0, bodyOpenEndIndex);
+    const htmlEnd = htmlTemplate.slice(bodyCloseIndex);
 
     // Renderizar el RSC payload como stream
     const { pipe: pipeRsc } = renderToPipeableStream(
