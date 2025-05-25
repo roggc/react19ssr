@@ -1,4 +1,3 @@
-// pages can be React Client Components (not async functions)
 "use client";
 
 export default function Page({

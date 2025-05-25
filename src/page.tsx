@@ -1,5 +1,3 @@
-// "use client";
-// pages can be React Server Components (async functions)
 import ServerComponent from "./server-component";
 import Counter from "./counter";
 import { Fragment, Suspense as ReactSuspense } from "react";
@@ -10,7 +8,6 @@ export default async function Page({
 }: {
   params: { [key: string]: string | undefined };
 }) {
-  // await new Promise((resolve) => setTimeout(resolve, 4000));
   return (
     <>
       <Suspense fallback={<div>Loading...</div>} resourceId="my-resource">
