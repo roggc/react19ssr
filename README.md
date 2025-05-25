@@ -38,7 +38,7 @@ export default async function Page({
 }) {
   return (
     <>
-      <a href="/route1?foo=bar">rural</a>
+      <a href="/route1?foo=bar">go to route1</a>
     </>
   );
 }
