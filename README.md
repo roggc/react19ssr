@@ -106,12 +106,12 @@ where `serverFunction` is:
 ```typescript
 "use server";
 
-export default function () {
-  return new Promise<string>((res) => setTimeout(() => res("Done"), 2000));
+export default async function () {
+  return await new Promise<string>((res) =>
+    setTimeout(() => res("Done"), 2000)
+  );
 }
 ```
-
-As you can see, the `serverFunction` returns a promise and doesn't `await` for it to resolve (this is important).
 
 The only reason for what it would be necessary to fetch data in the function body of a Server Component would be if this data is necessary for SEO purposes. But as I say, it blocks the rendering of the page for a certain amount of time.
 
