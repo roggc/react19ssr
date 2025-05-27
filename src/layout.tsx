@@ -5,7 +5,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
-        <title>fun!</title>
+        <title>react 19 app</title>
       </head>
       <body>{children}</body>
     </html>

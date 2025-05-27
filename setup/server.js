@@ -11,7 +11,7 @@ const babelRegister = require("@babel/register");
 // const webpackDevMiddleware = require("webpack-dev-middleware");
 // const webpackHotMiddleware = require("webpack-hot-middleware");
 // const webpackConfig = require("./webpack.config.js");
-const getJSX = require("./utils/get-jsx").getJSX;
+const getJSX = require("./get-jsx").getJSX;
 
 register();
 babelRegister({

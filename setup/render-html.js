@@ -9,7 +9,7 @@ require("@babel/register")({
 });
 const { renderToPipeableStream } = require("react-dom/server");
 const React = require("react");
-const getJSX = require("./utils/get-jsx").getJSX;
+const getJSX = require("./get-jsx").getJSX;
 
 // Function to check if a component is a client component
 function isClientComponent(type) {
