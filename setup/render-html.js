@@ -173,9 +173,7 @@ try {
         }
       }
 
-      const clientJsx = renderJSXToClientJSX(
-        React.createElement("div", { id: "root" }, child)
-      );
+      const clientJsx = renderJSXToClientJSX(child);
 
       const stream = renderToPipeableStream(clientJsx, {
         onError(error) {

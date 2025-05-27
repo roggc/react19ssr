@@ -126,48 +126,8 @@ function renderAppToHtml(folderPath, paramsString) {
 
 app.get(/^\/.*\/?$/, async (req, res) => {
   try {
-    const possibleExtensions = [".html", ".htm"];
-    let htmlPath = null;
-
     const folderPath =
       "src" + (req.path.endsWith("/") ? req.path : req.path + "/");
-
-    for (const ext of possibleExtensions) {
-      const candidatePath = path.resolve(
-        process.cwd(),
-        `${folderPath}index${ext}`
-      );
-      if (existsSync(candidatePath)) {
-        htmlPath = candidatePath;
-        break;
-      }
-    }
-
-    if (!htmlPath) {
-      return res
-        .status(404)
-        .send(
-          `Page not found: No "index" file found in ${folderPath} with supported extensions (.html, .htm)`
-        );
-    }
-
-    // Read the HTML template
-    const htmlTemplate = readFileSync(htmlPath, "utf8");
-
-    const bodyStartIndex = htmlTemplate.indexOf("<body");
-    const bodyOpenEndIndex = htmlTemplate.indexOf(">", bodyStartIndex) + 1;
-    const bodyCloseIndex = htmlTemplate.indexOf("</body>");
-    if (
-      bodyStartIndex === -1 ||
-      bodyOpenEndIndex === -1 ||
-      bodyCloseIndex === -1
-    ) {
-      return res
-        .status(500)
-        .send(`No "body" opening and/or closing tags found in HTML template`);
-    }
-    const htmlStart = htmlTemplate.slice(0, bodyOpenEndIndex);
-    const htmlEnd = htmlTemplate.slice(bodyCloseIndex);
 
     // Get the stream from the child process
     const appHtmlStream = await renderAppToHtml(
@@ -178,18 +138,7 @@ app.get(/^\/.*\/?$/, async (req, res) => {
     // Set headers for the response
     res.setHeader("Content-Type", "text/html");
 
-    // Send the start of the HTML
-    res.write(htmlStart);
-
-    // Pipe the stream from the child process (HTML of the component)
-    appHtmlStream.pipe(res, { end: false });
-
-    // When the child process stream finishes send the rest of the HTML
-    appHtmlStream.on("finish", () => {
-      // Send the end of the HTML
-      res.write(htmlEnd);
-      res.end();
-    });
+    appHtmlStream.pipe(res);
 
     appHtmlStream.on("error", (error) => {
       console.error("Stream error:", error);
