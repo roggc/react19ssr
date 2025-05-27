@@ -11,6 +11,7 @@ const { renderToPipeableStream } = require("react-dom/server");
 const React = require("react");
 const path = require("path");
 const { existsSync } = require("fs");
+const getLayouts = require("./utils/layouts").getLayouts;
 
 try {
   function getApp() {
@@ -22,7 +23,7 @@ try {
     for (const ext of possibleExtensions) {
       const candidatePath = path.resolve(
         process.cwd(),
-        `src${folderPath}page${ext}`
+        `${folderPath}page${ext}`
       );
       if (existsSync(candidatePath)) {
         appPath = candidatePath;
@@ -32,13 +33,14 @@ try {
 
     if (!appPath) {
       throw new Error(
-        `No "page" file found in "src${folderPath}" with supported extensions (.js, .jsx, .tsx)`
+        `No "page" file found in "${folderPath}" with supported extensions (.js, .jsx, .tsx)`
       );
     }
 
     const appModule = require(appPath);
     const App = appModule.default ?? appModule;
-    return { App, params };
+    layouts = getLayouts(folderPath);
+    return { App, params, layouts };
   }
 
   // Function to check if a component is a client component
@@ -142,11 +144,12 @@ try {
   // Render the app to a stream
   function renderToStream() {
     try {
-      let App, params;
+      let App, params, layouts;
       try {
-        ({ App: myApp, params: myParams } = getApp());
+        ({ App: myApp, params: myParams, layouts: myLayouts } = getApp());
         App = myApp;
         params = myParams;
+        layouts = myLayouts;
       } catch (error) {
         const stream = renderToPipeableStream(
           React.createElement("div", null, error.message),
@@ -163,12 +166,15 @@ try {
         return;
       }
 
+      let child = React.createElement(App, { params });
+      if (layouts && Array.isArray(layouts)) {
+        for (const Layout of layouts) {
+          child = React.createElement(Layout, null, child);
+        }
+      }
+
       const clientJsx = renderJSXToClientJSX(
-        React.createElement(
-          "div",
-          { id: "root" },
-          React.createElement(App, { params })
-        )
+        React.createElement("div", { id: "root" }, child)
       );
 
       const stream = renderToPipeableStream(clientJsx, {

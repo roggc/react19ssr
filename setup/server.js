@@ -7,6 +7,11 @@ const express = require("express");
 const React = require("react");
 const { spawn } = require("child_process");
 const babelRegister = require("@babel/register");
+// const webpack = require("webpack");
+// const webpackDevMiddleware = require("webpack-dev-middleware");
+// const webpackHotMiddleware = require("webpack-hot-middleware");
+// const webpackConfig = require("./webpack.config.js");
+const getLayouts = require("./utils/layouts").getLayouts;
 
 register();
 babelRegister({
@@ -20,6 +25,13 @@ babelRegister({
 });
 
 const app = express();
+// const compiler = webpack(webpackConfig);
+// app.use(
+//   webpackDevMiddleware(compiler, {
+//     publicPath: webpackConfig.output.publicPath,
+//   })
+// );
+// app.use(webpackHotMiddleware(compiler));
 
 app.use(express.static(path.resolve(process.cwd(), "public")));
 
@@ -27,14 +39,17 @@ app.get(/^\/____rsc_payload____\/.*\/?$/, (req, res) => {
   try {
     const possibleExtensions = [".tsx", ".jsx", ".js"];
     let appPath = null;
-    const folderPath = (
-      req.path.endsWith("/") ? req.path : req.path + "/"
-    ).replace("/____rsc_payload____", "");
+    const folderPath =
+      "src" +
+      (req.path.endsWith("/") ? req.path : req.path + "/").replace(
+        "/____rsc_payload____",
+        ""
+      );
 
     for (const ext of possibleExtensions) {
       const candidatePath = path.resolve(
         process.cwd(),
-        `src${folderPath}page${ext}`
+        `${folderPath}page${ext}`
       );
       if (existsSync(candidatePath)) {
         appPath = candidatePath;
@@ -47,7 +62,7 @@ app.get(/^\/____rsc_payload____\/.*\/?$/, (req, res) => {
         React.createElement(
           "div",
           null,
-          `Page not found: No "page" file found in "src${folderPath}" with supported extensions (.js, .jsx, .tsx)`
+          `Page not found: No "page" file found in "${folderPath}" with supported extensions (.js, .jsx, .tsx)`
         )
       );
       pipe(res);
@@ -62,10 +77,16 @@ app.get(/^\/____rsc_payload____\/.*\/?$/, (req, res) => {
     );
     const moduleMap = JSON.parse(manifest);
 
-    const { pipe } = renderToPipeableStream(
-      React.createElement(ReactApp, { params: { ...req.query } }),
-      moduleMap
-    );
+    const layouts = getLayouts(folderPath);
+
+    let child = React.createElement(ReactApp, { params: { ...req.query } });
+    if (layouts && Array.isArray(layouts)) {
+      for (const Layout of layouts) {
+        child = React.createElement(Layout, null, child);
+      }
+    }
+
+    const { pipe } = renderToPipeableStream(child, moduleMap);
     pipe(res);
   } catch (error) {
     console.error("Error rendering RSC:", error);
@@ -108,12 +129,13 @@ app.get(/^\/.*\/?$/, async (req, res) => {
     const possibleExtensions = [".html", ".htm"];
     let htmlPath = null;
 
-    const folderPath = req.path.endsWith("/") ? req.path : req.path + "/";
+    const folderPath =
+      "src" + (req.path.endsWith("/") ? req.path : req.path + "/");
 
     for (const ext of possibleExtensions) {
       const candidatePath = path.resolve(
         process.cwd(),
-        `src${folderPath}index${ext}`
+        `${folderPath}index${ext}`
       );
       if (existsSync(candidatePath)) {
         htmlPath = candidatePath;
@@ -125,7 +147,7 @@ app.get(/^\/.*\/?$/, async (req, res) => {
       return res
         .status(404)
         .send(
-          `Page not found: No "index" file found in src${folderPath} with supported extensions (.html, .htm)`
+          `Page not found: No "index" file found in ${folderPath} with supported extensions (.html, .htm)`
         );
     }
 
