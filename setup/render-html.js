@@ -14,7 +14,7 @@ const { existsSync } = require("fs");
 const getLayouts = require("./utils/layouts").getLayouts;
 
 try {
-  function getApp() {
+  function getJSX() {
     const possibleExtensions = [".tsx", ".jsx", ".js"];
     let appPath = null;
     const folderPath = process.argv[2];
@@ -40,7 +40,14 @@ try {
     const appModule = require(appPath);
     const App = appModule.default ?? appModule;
     layouts = getLayouts(folderPath);
-    return { App, params, layouts };
+
+    let jsx = React.createElement(App, { params });
+    if (layouts && Array.isArray(layouts)) {
+      for (const Layout of layouts) {
+        jsx = React.createElement(Layout, null, jsx);
+      }
+    }
+    return jsx;
   }
 
   // Function to check if a component is a client component
@@ -144,12 +151,9 @@ try {
   // Render the app to a stream
   function renderToStream() {
     try {
-      let App, params, layouts;
+      let jsx;
       try {
-        ({ App: myApp, params: myParams, layouts: myLayouts } = getApp());
-        App = myApp;
-        params = myParams;
-        layouts = myLayouts;
+        jsx = getJSX();
       } catch (error) {
         const stream = renderToPipeableStream(
           React.createElement("div", null, error.message),
@@ -166,14 +170,7 @@ try {
         return;
       }
 
-      let child = React.createElement(App, { params });
-      if (layouts && Array.isArray(layouts)) {
-        for (const Layout of layouts) {
-          child = React.createElement(Layout, null, child);
-        }
-      }
-
-      const clientJsx = renderJSXToClientJSX(child);
+      const clientJsx = renderJSXToClientJSX(jsx);
 
       const stream = renderToPipeableStream(clientJsx, {
         onError(error) {
