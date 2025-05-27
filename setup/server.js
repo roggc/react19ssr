@@ -1,7 +1,7 @@
 require("dotenv/config");
 const register = require("react-server-dom-webpack/node-register");
 const path = require("path");
-const { readFileSync, existsSync } = require("fs");
+const { readFileSync } = require("fs");
 const { renderToPipeableStream } = require("react-server-dom-webpack/server");
 const express = require("express");
 const React = require("react");
@@ -11,7 +11,7 @@ const babelRegister = require("@babel/register");
 // const webpackDevMiddleware = require("webpack-dev-middleware");
 // const webpackHotMiddleware = require("webpack-hot-middleware");
 // const webpackConfig = require("./webpack.config.js");
-const getLayouts = require("./utils/layouts").getLayouts;
+const getJSX = require("./utils/get-jsx").getJSX;
 
 register();
 babelRegister({
@@ -37,56 +37,29 @@ app.use(express.static(path.resolve(process.cwd(), "public")));
 
 app.get(/^\/____rsc_payload____\/.*\/?$/, (req, res) => {
   try {
-    const possibleExtensions = [".tsx", ".jsx", ".js"];
-    let appPath = null;
     const folderPath =
       "src" +
       (req.path.endsWith("/") ? req.path : req.path + "/").replace(
         "/____rsc_payload____",
         ""
       );
-
-    for (const ext of possibleExtensions) {
-      const candidatePath = path.resolve(
-        process.cwd(),
-        `${folderPath}page${ext}`
-      );
-      if (existsSync(candidatePath)) {
-        appPath = candidatePath;
-        break;
-      }
-    }
-
-    if (!appPath) {
+    let jsx;
+    try {
+      jsx = getJSX(folderPath, { ...req.query });
+    } catch (error) {
+      console.error("Error getting JSX:", error);
       const { pipe } = renderToPipeableStream(
-        React.createElement(
-          "div",
-          null,
-          `Page not found: No "page" file found in "${folderPath}" with supported extensions (.js, .jsx, .tsx)`
-        )
+        React.createElement("div", null, error.message)
       );
       pipe(res);
       return;
     }
-
-    const appModule = require(appPath);
-    const ReactApp = appModule.default ?? appModule;
     const manifest = readFileSync(
       path.resolve(process.cwd(), "public/react-client-manifest.json"),
       "utf8"
     );
     const moduleMap = JSON.parse(manifest);
-
-    const layouts = getLayouts(folderPath);
-
-    let child = React.createElement(ReactApp, { params: { ...req.query } });
-    if (layouts && Array.isArray(layouts)) {
-      for (const Layout of layouts) {
-        child = React.createElement(Layout, null, child);
-      }
-    }
-
-    const { pipe } = renderToPipeableStream(child, moduleMap);
+    const { pipe } = renderToPipeableStream(jsx, moduleMap);
     pipe(res);
   } catch (error) {
     console.error("Error rendering RSC:", error);
