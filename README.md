@@ -4,15 +4,23 @@ This project can be created with **`npx create-react19-app@latest my-app`**.
 
 This is a project ready to develop with **React 19**. Specifically with Server Functions and `Suspense`.
 
-This project is ready to develop either in **Typescript** or **Javascript**. If a `page.tsx` is found in a route folder, then it will take preference over a possible `page.jsx` or `page.js`. There must be at least a `page.tsx` or `page.jsx` (or `page.js`) in a route folder, and a `layout.tsx` (or `.jsx` or `.js`) in the root route (`src/`).
+This project is ready to develop either in **Typescript** or **Javascript**. If a `page.tsx` is found in a route folder, then it will take preference over a possible `page.jsx` or `page.js`. **There must be at least a `page.tsx` or `page.jsx` (or `page.js`) in a route folder**.
 
 With this project, you can build multi-page apps with file based routing and SSR. If you want a SPA (Single Page Application) without SSR then use the command above with the `--nossr` option: `npx create-react19-app@latest --nossr my-app`, and it will create a project like [this one](https://github.com/roggc/react19) instead.
 
 ## The `src` folder
 
-The multi-page app is developed in the `src` folder. There must be a `page.tsx` (or `.jsx`, or `.js`) file in this folder and a `layout.tsx` (or `.jsx`, or `.js`) file. It corresponds to the root route (`localhost:3000` or `localhost:3000/`). If you create a `src/route1` folder with a `page.tsx` file in it, then you can access it from the browser with `localhost:3000/route1` or `localhost:3000/route1/`. And so on. For example a `src/route1/anotherroute` with a `page.tsx` (or `.jsx`, or `.js`) file in it, can be accessed from the browser with `localhost:3000/route1/anotherroute` or with an ending slash.
+The multi-page app is developed in the `src` folder.
 
-The `layout` file is mandatory in the `src/` folder, because it defines the document with JSX (the `html` tag, etc). In the rest of routes (e.g. `src/route1/`, `src/route1/other-route`, ...) `layout` file is optional.
+### `page.tsx` (or `.jsx`, or `.js`) file
+
+There must be a `page.tsx` (or `.jsx`, or `.js`) file in each route folder. The `src/` folder corresponds to the root route (`localhost:3000` or `localhost:3000/`). If you create a `src/route-1` folder with a `page.tsx` file in it, then you can access it from the browser with `localhost:3000/route-1` or `localhost:3000/route-1/`. And so on. For example a `src/route-1/route-x` with a `page.tsx` (or `.jsx`, or `.js`) file in it, can be accessed from the browser with `localhost:3000/route-1/route-x` (or with an ending slash).
+
+### `layout.tsx` (or `.jsx`, or `.js`) file
+
+The `layout` file is optional in any route folder (even the root route folder, `src/`). If found, the composition of them will wrap the `page` component of the route. They are composed from `src/` folder to route folder. That is, if route folder is `src/route-1/route-x/`, then `layout.tsx` from `src/` folder, if exists, will wrap component defined in `layout.tsx` file of `src/route-1`, if exists, and this last will wrap component defined in `layout.tsx` file of `src/route-1/route-x/`, if exists, and finally, the result of them will wrap component defined in `page.tsx` file from route folder.
+
+### `page` Params
 
 You can pass params to the routes: `localhost:3000/route1?foo=bar`. Then in your `page.tsx` you do:
 
