@@ -20,24 +20,15 @@ function getJSX(folderPath, params) {
   let jsx;
 
   if (!pagePath) {
-    let notFoundPagePath = null;
-
-    for (const ext of possibleExtensions) {
-      const candidatePath = path.resolve(
-        process.cwd(),
-        `${folderPath}page${ext}`
-      );
-      if (existsSync(candidatePath)) {
-        notFoundPagePath = candidatePath;
-        break;
-      }
-    }
-    if (!notFoundPagePath) {
+    const NotFoundPage = getNotFoundPage(folderPath);
+    if (!NotFoundPage) {
       jsx = React.createElement(
         "div",
         null,
         `Page not found: no "page" file found in "${folderPath}" with supported extensions (.js, .jsx, .tsx)`
       );
+    } else {
+      jsx = React.createElement(NotFoundPage);
     }
   } else {
     const pageModule = require(pagePath);
@@ -56,6 +47,36 @@ function getJSX(folderPath, params) {
     }
   }
   return jsx;
+}
+
+function getNotFoundPage(folderPath) {
+  const splited = folderPath.split("/");
+  const notFoundPageFolderPaths = [];
+  for (let i = splited.length - 2; i >= 0; i--) {
+    notFoundPageFolderPaths.push(splited.slice(0, i + 1).join("/") + "/");
+  }
+  for (const notFoundPageFolderPath of notFoundPageFolderPaths) {
+    const NotFoundPage = getNotFoundPageFromFolder(notFoundPageFolderPath);
+    if (NotFoundPage) {
+      return NotFoundPage;
+    }
+  }
+}
+
+function getNotFoundPageFromFolder(folderPath) {
+  const possibleExtensions = [".tsx", ".jsx", ".js"];
+  for (const ext of possibleExtensions) {
+    const notFoundPath = path.resolve(
+      process.cwd(),
+      `${folderPath}not_found${ext}`
+    );
+    if (existsSync(notFoundPath)) {
+      const notFoundModule = require(notFoundPath);
+      const NotFound = notFoundModule.default ?? notFoundModule;
+      return NotFound;
+    }
+  }
+  return null;
 }
 
 function getLayouts(folderPath) {
