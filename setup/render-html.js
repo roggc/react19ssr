@@ -114,24 +114,8 @@ function renderToStream() {
   try {
     const folderPath = process.argv[2];
     const params = JSON.parse(process.argv[3]);
-    let jsx;
-    try {
-      jsx = getJSX(folderPath, params);
-    } catch (error) {
-      const stream = renderToPipeableStream(
-        React.createElement("div", null, error.message),
-        {
-          onError(error) {
-            console.error("Render error:", error);
-            process.stderr.write(JSON.stringify({ error: error.message }));
-          },
-          onShellReady() {
-            stream.pipe(process.stdout);
-          },
-        }
-      );
-      return;
-    }
+
+    jsx = getJSX(folderPath, params);
 
     const clientJsx = renderJSXToClientJSX(jsx);
 

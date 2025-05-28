@@ -4,20 +4,40 @@ This project can be created with **`npx create-react19-app@latest my-app`**.
 
 This is a project ready to develop with **React 19**. Specifically with Server Functions and `Suspense`.
 
-This project is ready to develop either in **Typescript** or **Javascript**. If a `page.tsx` is found in a route folder, then it will take preference over a possible `page.jsx` or `page.js`. There must be at least a `page.tsx` or `page.jsx` (or `page.js`) in a route folder, and a `layout.tsx` (or `.jsx` or `.js`) in the root route (`src/`).
+This project is ready to develop either in **Typescript** or **Javascript**. If a `page.tsx` is found in a route folder, then it will take preference over a possible `page.jsx` or `page.js`. **There must be at least a `page.tsx` or `page.jsx` (or `page.js`) in a route folder**.
 
 With this project, you can build multi-page apps with file based routing and SSR. If you want a SPA (Single Page Application) without SSR then use the command above with the `--nossr` option: `npx create-react19-app@latest --nossr my-app`, and it will create a project like [this one](https://github.com/roggc/react19) instead.
 
 ## The `src` folder
 
-The multi-page app is developed in the `src` folder. There must be a `page.tsx` (or `.jsx`, or `.js`) file in this folder and a `layout.tsx` (or `.jsx`, or `.js`) file. It corresponds to the root route (`localhost:3000` or `localhost:3000/`). If you create a `src/route1` folder with a `page.tsx` file in it, then you can access it from the browser with `localhost:3000/route1` or `localhost:3000/route1/`. And so on. For example a `src/route1/anotherroute` with a `page.tsx` (or `.jsx`, or `.js`) file in it, can be accessed from the browser with `localhost:3000/route1/anotherroute` or with an ending slash.
+The multi-page app is developed in the `src` folder.
 
-The `layout` file is mandatory in the `src/` folder, because it defines the document with JSX (the `html` tag, etc). In the rest of routes (e.g. `src/route1/`, `src/route1/other-route`, ...) `layout` file is optional.
+### `page.tsx` (or `.jsx`, or `.js`) file
 
-You can pass params to the routes: `localhost:3000/route1?foo=bar`. Then in your `page.tsx` you do:
+There must be a `page.tsx` (or `.jsx`, or `.js`) file in each route folder. The `src/` folder corresponds to the root route (`localhost:3000` or `localhost:3000/`). If you create a `src/route-1` folder with a `page.tsx` file in it, then you can access it from the browser with `localhost:3000/route-1` or `localhost:3000/route-1/`. And so on. For example a `src/route-1/route-x` with a `page.tsx` (or `.jsx`, or `.js`) file in it, can be accessed from the browser with `localhost:3000/route-1/route-x` (or with an ending slash).
+
+### `layout.tsx` (or `.jsx`, or `.js`) file
+
+The `layout` file is optional in any route folder (even the root route folder, `src/`). If found, the composition of them will wrap the `page` component of the route. They are composed from `src/` folder to route folder. That is, if route folder is `src/route-1/route-x/`, then `layout.tsx` from `src/` folder, if exists, will wrap component defined in `layout.tsx` file of `src/route-1`, if exists, and this last will wrap component defined in `layout.tsx` file of `src/route-1/route-x/`, if exists, and finally, the result of them will wrap component defined in `page.tsx` file from route folder.
+
+### `no_layout` file (without extension)
+
+The `no_layout` file (without extension), if present in a route folder, will not apply any `layout` to the `page` component of this route.
+
+### `not_found.tsx` (or `.jsx`, or `.js`) file
+
+The `not_found.tsx` file in a route defines a page for this route and nested routes for when there is no `page.tsx` file in the route requested by the Client. When there are more than one `not_found.tsx` files in the path to the requested route, the nearest to the requested path (the more nested one) will be used.
+
+### `no_layout_not_found` file (without extension)
+
+The `not_found.tsx` file defines a component which by default uses the applicable layouts. If you don't want to use any layout for a specific `not_found.tsx` file, then define a `no_layout_not_found` file (without extension) in the same folder the specific `not_found.tsx` file is defined.
+
+## `page` Params
+
+You can pass params to the routes: `localhost:3000/route-1?foo=bar`. Then in your `page.tsx` you do:
 
 ```typescript
-// src/route1/page.tsx
+// src/route-1/page.tsx
 "use client";
 
 export default function Page({
@@ -40,7 +60,7 @@ export default async function Page({
 }) {
   return (
     <>
-      <a href="/route1?foo=bar">go to route1</a>
+      <a href="/route-1?foo=bar">go to route1</a>
     </>
   );
 }
@@ -58,12 +78,12 @@ export default function Page({
   params: { [key: string]: string | undefined };
 }) {
   const handleNavigate = () => {
-    window.location.assign("/route2?foo=bar");
+    window.location.assign("/route-2?foo=bar");
   };
 
   return (
     <div>
-      <button onClick={handleNavigate}>Go to Route2</button>
+      <button onClick={handleNavigate}>Go to /route-2</button>
     </div>
   );
 }
