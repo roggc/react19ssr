@@ -4,7 +4,7 @@ const React = require("react");
 
 function getJSX(folderPath, params) {
   const possibleExtensions = [".tsx", ".jsx", ".js"];
-  let appPath = null;
+  let pagePath = null;
 
   for (const ext of possibleExtensions) {
     const candidatePath = path.resolve(
@@ -12,22 +12,27 @@ function getJSX(folderPath, params) {
       `${folderPath}page${ext}`
     );
     if (existsSync(candidatePath)) {
-      appPath = candidatePath;
+      pagePath = candidatePath;
       break;
     }
   }
 
-  if (!appPath) {
+  if (!pagePath) {
     throw new Error(
       `No "page" file found in "${folderPath}" with supported extensions (.js, .jsx, .tsx)`
     );
   }
 
-  const appModule = require(appPath);
-  const App = appModule.default ?? appModule;
-  const layouts = getLayouts(folderPath);
+  const pageModule = require(pagePath);
+  const Page = pageModule.default ?? pageModule;
 
-  let jsx = React.createElement(App, { params });
+  let jsx = React.createElement(Page, { params });
+
+  if (existsSync(path.resolve(process.cwd(), `${folderPath}no_layout`))) {
+    return jsx;
+  }
+
+  const layouts = getLayouts(folderPath);
   if (layouts && Array.isArray(layouts)) {
     for (const Layout of layouts) {
       jsx = React.createElement(Layout, null, jsx);

@@ -20,12 +20,16 @@ There must be a `page.tsx` (or `.jsx`, or `.js`) file in each route folder. The 
 
 The `layout` file is optional in any route folder (even the root route folder, `src/`). If found, the composition of them will wrap the `page` component of the route. They are composed from `src/` folder to route folder. That is, if route folder is `src/route-1/route-x/`, then `layout.tsx` from `src/` folder, if exists, will wrap component defined in `layout.tsx` file of `src/route-1`, if exists, and this last will wrap component defined in `layout.tsx` file of `src/route-1/route-x/`, if exists, and finally, the result of them will wrap component defined in `page.tsx` file from route folder.
 
-### `page` Params
+### `no_layout` file (without extension)
 
-You can pass params to the routes: `localhost:3000/route1?foo=bar`. Then in your `page.tsx` you do:
+The `no_layout` file (without extension), if present in a route folder, will not apply any `layout` to the `page` component of this route.
+
+## `page` Params
+
+You can pass params to the routes: `localhost:3000/route-1?foo=bar`. Then in your `page.tsx` you do:
 
 ```typescript
-// src/route1/page.tsx
+// src/route-1/page.tsx
 "use client";
 
 export default function Page({
@@ -48,7 +52,7 @@ export default async function Page({
 }) {
   return (
     <>
-      <a href="/route1?foo=bar">go to route1</a>
+      <a href="/route-1?foo=bar">go to route1</a>
     </>
   );
 }
@@ -66,12 +70,12 @@ export default function Page({
   params: { [key: string]: string | undefined };
 }) {
   const handleNavigate = () => {
-    window.location.assign("/route2?foo=bar");
+    window.location.assign("/route-2?foo=bar");
   };
 
   return (
     <div>
-      <button onClick={handleNavigate}>Go to Route2</button>
+      <button onClick={handleNavigate}>Go to /route-2</button>
     </div>
   );
 }
