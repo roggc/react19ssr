@@ -24,6 +24,14 @@ The `layout` file is optional in any route folder (even the root route folder, `
 
 The `no_layout` file (without extension), if present in a route folder, will not apply any `layout` to the `page` component of this route.
 
+### `not_found.tsx` (or `.jsx`, or `.js`) file
+
+The `not_found.tsx` file in a route defines a page for this route and nested routes for when there is no `page.tsx` file in the route requested by the Client. When there are more than one `not_found.tsx` files in the path to the requested route, the nearest to the requested path (the more nested one) will be used.
+
+### `no_layout_not_found` file (without extension)
+
+The `not_found.tsx` file defines a component which by default uses the applicable layouts. If you don't want to use any layout for a specific `not_found.tsx` file, then define a `no_layout_not_found` file (without extension) in the same folder the specific `not_found.tsx` file is defined.
+
 ## `page` Params
 
 You can pass params to the routes: `localhost:3000/route-1?foo=bar`. Then in your `page.tsx` you do:

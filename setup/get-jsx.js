@@ -20,7 +20,8 @@ function getJSX(folderPath, params) {
   let jsx;
 
   if (!pagePath) {
-    const NotFoundPage = getNotFoundPage(folderPath);
+    const { NotFoundPage, notFoundPageFolderPath } =
+      getNotFoundPage(folderPath);
     if (!NotFoundPage) {
       jsx = React.createElement(
         "div",
@@ -29,6 +30,16 @@ function getJSX(folderPath, params) {
       );
     } else {
       jsx = React.createElement(NotFoundPage);
+      if (
+        existsSync(
+          path.resolve(
+            process.cwd(),
+            `${notFoundPageFolderPath}no_layout_not_found`
+          )
+        )
+      ) {
+        return jsx;
+      }
     }
   } else {
     const pageModule = require(pagePath);
@@ -58,9 +69,10 @@ function getNotFoundPage(folderPath) {
   for (const notFoundPageFolderPath of notFoundPageFolderPaths) {
     const NotFoundPage = getNotFoundPageFromFolder(notFoundPageFolderPath);
     if (NotFoundPage) {
-      return NotFoundPage;
+      return { NotFoundPage, notFoundPageFolderPath };
     }
   }
+  return {};
 }
 
 function getNotFoundPageFromFolder(folderPath) {
