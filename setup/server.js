@@ -43,17 +43,8 @@ app.get(/^\/____rsc_payload____\/.*\/?$/, (req, res) => {
         "/____rsc_payload____",
         ""
       );
-    let jsx;
-    try {
-      jsx = getJSX(folderPath, { ...req.query });
-    } catch (error) {
-      console.error("Error getting JSX:", error);
-      const { pipe } = renderToPipeableStream(
-        React.createElement("div", null, error.message)
-      );
-      pipe(res);
-      return;
-    }
+
+    jsx = getJSX(folderPath, { ...req.query });
     const manifest = readFileSync(
       path.resolve(process.cwd(), "public/react-client-manifest.json"),
       "utf8"

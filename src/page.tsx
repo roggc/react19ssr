@@ -10,10 +10,10 @@ export default function Page({
 }) {
   return (
     <>
+      <h1>Hello you!</h1>
       <Suspense fallback={<div>Loading...</div>}>
         {new Promise((resolve) => setTimeout(() => resolve("Loaded"), 3000))}
       </Suspense>
-      <h1>Hello you!</h1>
       <Counter />
     </>
   );

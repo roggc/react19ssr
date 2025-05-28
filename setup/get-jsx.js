@@ -17,16 +17,33 @@ function getJSX(folderPath, params) {
     }
   }
 
+  let jsx;
+
   if (!pagePath) {
-    throw new Error(
-      `No "page" file found in "${folderPath}" with supported extensions (.js, .jsx, .tsx)`
-    );
+    let notFoundPagePath = null;
+
+    for (const ext of possibleExtensions) {
+      const candidatePath = path.resolve(
+        process.cwd(),
+        `${folderPath}page${ext}`
+      );
+      if (existsSync(candidatePath)) {
+        notFoundPagePath = candidatePath;
+        break;
+      }
+    }
+    if (!notFoundPagePath) {
+      jsx = React.createElement(
+        "div",
+        null,
+        `Page not found: no "page" file found in "${folderPath}" with supported extensions (.js, .jsx, .tsx)`
+      );
+    }
+  } else {
+    const pageModule = require(pagePath);
+    const Page = pageModule.default ?? pageModule;
+    jsx = React.createElement(Page, { params });
   }
-
-  const pageModule = require(pagePath);
-  const Page = pageModule.default ?? pageModule;
-
-  let jsx = React.createElement(Page, { params });
 
   if (existsSync(path.resolve(process.cwd(), `${folderPath}no_layout`))) {
     return jsx;
