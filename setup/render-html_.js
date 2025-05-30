@@ -112,10 +112,10 @@ function renderJSXToClientJSX(jsx, key = null) {
 // Render the app to a stream
 function renderToStream() {
   try {
-    const reqPath = process.argv[2];
+    const folderPath = process.argv[2];
     const params = JSON.parse(process.argv[3]);
 
-    jsx = getJSX(reqPath, params);
+    jsx = getJSX(folderPath, params);
 
     const clientJsx = renderJSXToClientJSX(jsx);
 

@@ -37,11 +37,14 @@ app.use(express.static(path.resolve(process.cwd(), "public")));
 
 app.get(/^\/____rsc_payload____\/.*\/?$/, (req, res) => {
   try {
-    const reqPath = (
-      req.path.endsWith("/") ? req.path : req.path + "/"
-    ).replace("/____rsc_payload____", "");
+    const folderPath =
+      "src" +
+      (req.path.endsWith("/") ? req.path : req.path + "/").replace(
+        "/____rsc_payload____",
+        ""
+      );
 
-    jsx = getJSX(reqPath, { ...req.query });
+    jsx = getJSX(folderPath, { ...req.query });
     const manifest = readFileSync(
       path.resolve(process.cwd(), "public/react-client-manifest.json"),
       "utf8"
@@ -56,11 +59,11 @@ app.get(/^\/____rsc_payload____\/.*\/?$/, (req, res) => {
 });
 
 // Render HTML via child process, returning a stream
-function renderAppToHtml(reqPath, paramsString) {
+function renderAppToHtml(folderPath, paramsString) {
   return new Promise((resolve, reject) => {
     const child = spawn("node", [
       path.resolve(__dirname, "render-html.js"),
-      reqPath,
+      folderPath,
       paramsString,
     ]);
 
@@ -87,11 +90,12 @@ function renderAppToHtml(reqPath, paramsString) {
 
 app.get(/^\/.*\/?$/, async (req, res) => {
   try {
-    const reqPath = req.path.endsWith("/") ? req.path : req.path + "/";
+    const folderPath =
+      "src" + (req.path.endsWith("/") ? req.path : req.path + "/");
 
     // Get the stream from the child process
     const appHtmlStream = await renderAppToHtml(
-      reqPath,
+      folderPath,
       JSON.stringify({ ...req.query })
     );
 
