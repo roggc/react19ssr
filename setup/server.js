@@ -88,7 +88,7 @@ function renderAppToHtml(reqPath, paramsString) {
 app.get(/^\/.*\/?$/, async (req, res) => {
   try {
     const reqPath = req.path.endsWith("/") ? req.path : req.path + "/";
-
+    console.log("reqPath", reqPath);
     // Get the stream from the child process
     const appHtmlStream = await renderAppToHtml(
       reqPath,

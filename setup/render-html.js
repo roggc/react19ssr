@@ -8,7 +8,6 @@ require("@babel/register")({
   extensions: [".js", ".jsx", ".ts", ".tsx"],
 });
 const { renderToPipeableStream } = require("react-dom/server");
-const React = require("react");
 const getJSX = require("./get-jsx").getJSX;
 
 // Function to check if a component is a client component
@@ -112,9 +111,10 @@ function renderJSXToClientJSX(jsx, key = null) {
 // Render the app to a stream
 function renderToStream() {
   try {
+    console.warn("a");
     const reqPath = process.argv[2];
     const params = JSON.parse(process.argv[3]);
-
+    // console.log("renderToStream");
     jsx = getJSX(reqPath, params);
 
     const clientJsx = renderJSXToClientJSX(jsx);
