@@ -17,25 +17,22 @@ function getJSX(reqPath, params) {
       }
     }
   }
-
-  function findPagePath(
-    currentPath = srcFolder,
-    index = 0,
-    dynamicParams = {}
-  ) {
+  let dynamicParams = {};
+  function findPagePath(currentPath = srcFolder, index = 0, dParams = {}) {
     if (index > reqSegments.length - 1) {
       for (const ext of possibleExtensions) {
         const candidatePath = path.join(currentPath, `page${ext}`);
         if (existsSync(candidatePath)) {
           pagePath = candidatePath;
-          return dynamicParams;
+          dynamicParams = dParams;
+          return;
         }
       }
       return;
     }
     const staticPath = path.join(currentPath, reqSegments[index]);
     if (existsSync(staticPath)) {
-      findPagePath(staticPath, index + 1, dynamicParams);
+      findPagePath(staticPath, index + 1, dParams);
     } else {
       const entries = readdirSync(currentPath, { withFileTypes: true });
       for (const entry of entries) {
@@ -46,9 +43,8 @@ function getJSX(reqPath, params) {
         ) {
           const paramName = entry.name.slice(1, -1);
           const paramValue = reqSegments[index];
-          // console.log("paramName", paramName, "paramValue", paramValue);
           const newParams = {
-            ...dynamicParams,
+            ...dParams,
             [paramName]: paramValue,
           };
           return findPagePath(
@@ -61,8 +57,7 @@ function getJSX(reqPath, params) {
     }
   }
 
-  const dynamicParams = findPagePath();
-  // console.log("pagePath", pagePath);
+  findPagePath();
 
   // function findNoLayout(currentPath, reqSegments, index = 0) {
   //   if (index >= reqSegments.length) {
@@ -101,9 +96,7 @@ function getJSX(reqPath, params) {
 
   let jsx;
 
-  // const route = findPage(srcFolder, reqSegments, 0, params);
   if (!pagePath) {
-    console.log("here");
     const { NotFoundPage, notFoundPageFolderPath } = getNotFoundPage(
       srcFolder,
       reqSegments
@@ -141,15 +134,11 @@ function getJSX(reqPath, params) {
       }
     }
   } else {
-    // const { pagePath, params: dynamicParams } = route;
-    // console.log("pagePath", pagePath);
     const pageModule = require(pagePath);
     const Page = pageModule.default ?? pageModule;
-    // jsx = React.createElement(Page, {
-    //   params: { ...dynamicParams, ...params },
-    // });
-    // console.log("dynamicParams", dynamicParams);
-    jsx = React.createElement(Page, { params: dynamicParams });
+    jsx = React.createElement(Page, {
+      params: { ...dynamicParams, ...params },
+    });
   }
 
   // if (findNoLayout(srcFolder, reqSegments)) {

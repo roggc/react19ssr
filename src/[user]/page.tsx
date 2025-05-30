@@ -1,7 +1,12 @@
 export default function Page({
-  params: { user },
+  params: { user, name },
 }: {
-  params: { user: string };
+  params: { user: string; [key: string]: string };
 }) {
-  return <>Users page{user}</>;
+  return (
+    <>
+      Users page{user}
+      {name}
+    </>
+  );
 }
