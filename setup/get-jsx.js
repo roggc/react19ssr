@@ -140,10 +140,14 @@ function getJSX(reqPath, params) {
   }
 
   const layouts = getLayouts(srcFolder, reqSegments);
-  console.log("layouts.length", layouts.length, reqSegments);
+  console.warn("layouts.length", layouts.length, reqSegments);
   if (layouts && Array.isArray(layouts)) {
-    for (const Layout of layouts) {
-      jsx = React.createElement(Layout, { params }, jsx);
+    for (const { Layout, dynamicParams } of layouts) {
+      jsx = React.createElement(
+        Layout,
+        { params: { ...dynamicParams, ...params } },
+        jsx
+      );
     }
   }
 
@@ -204,47 +208,47 @@ function getNotFoundPageFromFolder(folderPath) {
   return null;
 }
 
-function getLayouts(srcFolder, reqSegments) {
-  function findLayouts(currentPath, reqSegments, index = 0, layouts = []) {
-    if (index >= reqSegments.length) {
-      const layout = getLayoutFromFolder(currentPath);
-      if (layout) layouts.push(layout);
+function getLayouts(srcFolder, reqSegments, queryParams) {
+  function findLayouts(
+    reqSegments,
+    index = 0,
+    layouts = [],
+    dynamicParams = {}
+  ) {
+    console.warn("findLayouts");
+    if (index === -1) {
+      const layout = getLayoutFromFolder(srcFolder);
+      if (layout) layouts.push({ Layout: layout, dynamicParams: {} });
       return layouts;
     }
 
-    const reqSegment = reqSegments[index];
-    const staticPath = path.join(currentPath, reqSegment);
-
-    if (existsSync(staticPath)) {
-      const layout = getLayoutFromFolder(staticPath);
-      if (layout) layouts.push(layout);
-      return findLayouts(staticPath, reqSegments, index + 1, layouts);
+    const folderPath = path.join(srcFolder, ...reqSegments.slice(0, index + 1));
+    console.warn("folderPath", folderPath);
+    if (existsSync(folderPath)) {
+      const layout = getLayoutFromFolder(folderPath);
+      if (layout) layouts.push({ Layout: layout, dynamicParams });
+      return findLayouts(reqSegments, index - 1, layouts, dynamicParams);
     }
-
-    const entries = readdirSync(currentPath, { withFileTypes: true });
-    for (const entry of entries) {
-      if (
-        entry.isDirectory() &&
-        entry.name.startsWith("[") &&
-        entry.name.endsWith("]")
-      ) {
-        const dynamicPath = path.join(currentPath, entry.name);
-        const layout = getLayoutFromFolder(dynamicPath);
-        if (layout) layouts.push(layout);
-        const result = findLayouts(
-          dynamicPath,
-          reqSegments,
-          index + 1,
-          layouts
-        );
-        if (result) return result;
-      }
+    console.warn("going to read dir");
+    const entry = readdirSync(folderPath, { withFileTypes: true }).slice(-1)[0];
+    console.warn("entry", entry);
+    if (
+      entry.isDirectory() &&
+      entry.name.startsWith("[") &&
+      entry.name.endsWith("]")
+    ) {
+      const paramName = entry.name.slice(1, -1);
+      const paramValue = reqSegments[index] ?? "";
+      const newParams = { ...dynamicParams, [paramName]: paramValue };
+      const layout = getLayoutFromFolder(folderPath);
+      if (layout) layouts.push({ Layout: layout, dynamicParams: newParams });
+      return findLayouts(reqSegments, index - 1, layouts, newParams);
     }
 
     return layouts;
   }
 
-  return findLayouts(srcFolder, reqSegments);
+  return findLayouts(reqSegments, reqSegments.length - 1);
 }
 
 function getLayoutFromFolder(folderPath) {
