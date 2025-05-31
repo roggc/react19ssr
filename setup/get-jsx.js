@@ -17,22 +17,69 @@ function getJSX(reqPath, params) {
       }
     }
   }
-  let dynamicParams = {};
-  function findPagePath(currentPath = srcFolder, index = 0, dParams = {}) {
-    if (index > reqSegments.length - 1) {
-      for (const ext of possibleExtensions) {
-        const candidatePath = path.join(currentPath, `page${ext}`);
+  let dynamicParams;
+  function getFilePathAndDynamicParams(
+    fileName = "page",
+    withExtension = true,
+    finalDestination = true,
+    lastFound = undefined,
+    currentPath = srcFolder,
+    index = 0,
+    dParams = {},
+    accumulative = false,
+    accumulate = []
+  ) {
+    let foundInCurrentPath;
+    if (index > reqSegments.length - 1 || !finalDestination) {
+      if (withExtension) {
+        for (const ext of possibleExtensions) {
+          const candidatePath = path.join(currentPath, `${fileName}${ext}`);
+          if (existsSync(candidatePath)) {
+            if (index > reqSegments.length - 1) {
+              if (!accumulative) return [candidatePath, dParams];
+              accumulate.push([candidatePath, dParams]);
+              return accumulate;
+            }
+            if (accumulative) {
+              accumulate.push([candidatePath, dParams]);
+            } else {
+              foundInCurrentPath = candidatePath;
+            }
+          }
+        }
+      } else {
+        const candidatePath = path.join(currentPath, fileName);
         if (existsSync(candidatePath)) {
-          pagePath = candidatePath;
-          dynamicParams = dParams;
-          return;
+          if (index > reqSegments.length - 1) {
+            if (!accumulative) return [candidatePath, dParams];
+            accumulate.push([candidatePath, dParams]);
+            return accumulate;
+          }
+          if (accumulative) {
+            accumulate.push([candidatePath, dParams]);
+          } else {
+            foundInCurrentPath = candidatePath;
+          }
         }
       }
-      return;
+      if (index > reqSegments.length - 1) {
+        if (!accumulative) return finalDestination ? [] : [lastFound, dParams];
+        return accumulate;
+      }
     }
     const staticPath = path.join(currentPath, reqSegments[index]);
     if (existsSync(staticPath)) {
-      findPagePath(staticPath, index + 1, dParams);
+      return getFilePathAndDynamicParams(
+        fileName,
+        withExtension,
+        finalDestination,
+        finalDestination ? lastFound : foundInCurrentPath ?? lastFound,
+        staticPath,
+        index + 1,
+        dParams,
+        accumulative,
+        accumulate
+      );
     } else {
       const entries = readdirSync(currentPath, { withFileTypes: true });
       for (const entry of entries) {
@@ -47,61 +94,41 @@ function getJSX(reqPath, params) {
             ...dParams,
             [paramName]: paramValue,
           };
-          return findPagePath(
+          return getFilePathAndDynamicParams(
+            fileName,
+            withExtension,
+            finalDestination,
+            finalDestination ? lastFound : foundInCurrentPath ?? lastFound,
             path.join(currentPath, entry.name),
             index + 1,
-            newParams
+            newParams,
+            accumulative,
+            accumulate
           );
         }
       }
+      if (!accumulative)
+        return finalDestination
+          ? []
+          : [foundInCurrentPath ?? lastFound, dParams];
+      return accumulate;
     }
   }
-
-  findPagePath();
-
-  // function findNoLayout(currentPath, reqSegments, index = 0) {
-  //   if (index >= reqSegments.length) {
-  //     const noLayoutPath = path.join(currentPath, "no_layout");
-  //     if (existsSync(noLayoutPath)) {
-  //       return true;
-  //     }
-  //     return false;
-  //   }
-
-  //   const reqSegment = reqSegments[index];
-  //   const entries = readdirSync(currentPath, { withFileTypes: true });
-
-  //   // Intentar con carpeta estática
-  //   const staticPath = path.join(currentPath, reqSegment);
-  //   if (existsSync(staticPath)) {
-  //     const result = findNoLayout(staticPath, reqSegments, index + 1);
-  //     if (result) return result;
-  //   }
-
-  //   // Intentar con carpeta dinámica ([param])
-  //   for (const entry of entries) {
-  //     if (
-  //       entry.isDirectory() &&
-  //       entry.name.startsWith("[") &&
-  //       entry.name.endsWith("]")
-  //     ) {
-  //       const dynamicPath = path.join(currentPath, entry.name);
-  //       const result = findNoLayout(dynamicPath, reqSegments, index + 1);
-  //       if (result) return result;
-  //     }
-  //   }
-
-  //   return false;
-  // }
+  if (!pagePath) {
+    const [filePath, dParams] = getFilePathAndDynamicParams();
+    pagePath = filePath;
+    dynamicParams = dParams ?? {};
+  }
 
   let jsx;
 
   if (!pagePath) {
-    const { NotFoundPage, notFoundPageFolderPath } = getNotFoundPage(
-      srcFolder,
-      reqSegments
+    const [notFoundPath, dParams] = getFilePathAndDynamicParams(
+      "not_found",
+      true,
+      false
     );
-    if (!NotFoundPage) {
+    if (!notFoundPath) {
       jsx = React.createElement(
         "html",
         null,
@@ -121,13 +148,14 @@ function getJSX(reqPath, params) {
         )
       );
     } else {
-      jsx = React.createElement(NotFoundPage, { params });
+      const pageModule = require(notFoundPath);
+      const Page = pageModule.default ?? pageModule;
+      jsx = React.createElement(Page, {
+        params: { ...(dParams ?? {}), ...params },
+      });
       if (
         existsSync(
-          path.resolve(
-            process.cwd(),
-            `${notFoundPageFolderPath}no_layout_not_found`
-          )
+          path.resolve(process.cwd(), `${notFoundPath}no_layout_not_found`)
         )
       ) {
         return jsx;
@@ -141,135 +169,34 @@ function getJSX(reqPath, params) {
     });
   }
 
-  // if (findNoLayout(srcFolder, reqSegments)) {
-  //   return jsx;
-  // }
+  if (getFilePathAndDynamicParams("no_layout", false)[0]) {
+    return jsx;
+  }
 
-  // const layouts = getLayouts(srcFolder, reqSegments);
+  const layouts = getFilePathAndDynamicParams(
+    "layout",
+    true,
+    false,
+    undefined,
+    srcFolder,
+    0,
+    {},
+    true
+  );
 
-  // if (layouts && Array.isArray(layouts)) {
-  //   for (const { Layout, dynamicParams } of layouts) {
-  //     jsx = React.createElement(
-  //       Layout,
-  //       { params: { ...dynamicParams, ...params } },
-  //       jsx
-  //     );
-  //   }
-  // }
+  if (layouts && Array.isArray(layouts)) {
+    for (const [layoutPath, dParams] of layouts.reverse()) {
+      const pageModule = require(layoutPath);
+      const Page = pageModule.default ?? pageModule;
+      jsx = React.createElement(
+        Page,
+        { params: { ...dParams, ...params } },
+        jsx
+      );
+    }
+  }
 
   return jsx;
-}
-
-function getNotFoundPage(srcFolder, reqSegments) {
-  function findNotFound(currentPath, reqSegments, index = 0) {
-    if (index >= reqSegments.length) {
-      const notFoundPage = getNotFoundPageFromFolder(currentPath);
-      if (notFoundPage) {
-        return {
-          NotFoundPage: notFoundPage,
-          notFoundPageFolderPath: path.join(currentPath, "/"),
-        };
-      }
-      return null;
-    }
-
-    const reqSegment = reqSegments[index];
-    const staticPath = path.join(currentPath, reqSegment);
-
-    if (existsSync(staticPath)) {
-      const result = findNotFound(staticPath, reqSegments, index + 1);
-      if (result) return result;
-    }
-
-    const entries = readdirSync(currentPath, { withFileTypes: true });
-    for (const entry of entries) {
-      if (
-        entry.isDirectory() &&
-        entry.name.startsWith("[") &&
-        entry.name.endsWith("]")
-      ) {
-        const dynamicPath = path.join(currentPath, entry.name);
-        const result = findNotFound(dynamicPath, reqSegments, index + 1);
-        if (result) return result;
-      }
-    }
-
-    return null;
-  }
-
-  const result = findNotFound(srcFolder, reqSegments);
-  return result ?? {};
-}
-
-function getNotFoundPageFromFolder(folderPath) {
-  const possibleExtensions = [".tsx", ".jsx", ".js"];
-  for (const ext of possibleExtensions) {
-    const notFoundPath = path.join(folderPath, `not_found${ext}`);
-    if (existsSync(notFoundPath)) {
-      const notFoundModule = require(notFoundPath);
-      const NotFound = notFoundModule.default ?? notFoundModule;
-      return NotFound;
-    }
-  }
-  return null;
-}
-
-function getLayouts(srcFolder, reqSegments, queryParams) {
-  function findLayouts(
-    reqSegments,
-    index = 0,
-    layouts = [],
-    dynamicParams = {}
-  ) {
-    if (index === -1) {
-      const layout = getLayoutFromFolder(srcFolder);
-      if (layout) layouts.push({ Layout: layout, dynamicParams: {} });
-      return layouts;
-    }
-
-    const folderPath = path.join(srcFolder, ...reqSegments.slice(0, index + 1));
-
-    if (existsSync(folderPath)) {
-      const layout = getLayoutFromFolder(folderPath);
-      if (layout) layouts.push({ Layout: layout, dynamicParams });
-      return findLayouts(reqSegments, index - 1, layouts, dynamicParams);
-    }
-
-    const entries = readdirSync(folderPath, { withFileTypes: true }).slice(
-      -1
-    )[0];
-    for (const entry of entries) {
-      if (
-        entry.isDirectory() &&
-        entry.name.startsWith("[") &&
-        entry.name.endsWith("]")
-      ) {
-        const paramName = entry.name.slice(1, -1);
-        const paramValue = reqSegments[index] ?? "";
-        const newParams = { ...dynamicParams, [paramName]: paramValue };
-        const layout = getLayoutFromFolder(folderPath);
-        if (layout) layouts.push({ Layout: layout, dynamicParams: newParams });
-        return findLayouts(reqSegments, index - 1, layouts, newParams);
-      }
-    }
-
-    return layouts;
-  }
-
-  return findLayouts(reqSegments, reqSegments.length - 1);
-}
-
-function getLayoutFromFolder(folderPath) {
-  const possibleExtensions = [".tsx", ".jsx", ".js"];
-  for (const ext of possibleExtensions) {
-    const layoutPath = path.join(folderPath, `layout${ext}`);
-    if (existsSync(layoutPath)) {
-      const layoutModule = require(layoutPath);
-      const Layout = layoutModule.default ?? layoutModule;
-      return Layout;
-    }
-  }
-  return null;
 }
 
 module.exports = {
