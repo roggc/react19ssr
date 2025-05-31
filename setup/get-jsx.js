@@ -29,7 +29,7 @@ function getJSX(reqPath, params) {
         true,
         true,
         undefined,
-        path.join(srcFolder, slot.name),
+        path.join(currentPath, slot.name),
         reqSegments.length
       );
       if (slotPath) {
