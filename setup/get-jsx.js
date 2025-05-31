@@ -83,28 +83,62 @@ function getJSX(reqPath, params) {
     } else {
       const entries = readdirSync(currentPath, { withFileTypes: true });
       for (const entry of entries) {
-        if (
-          entry.isDirectory() &&
-          entry.name.startsWith("[") &&
-          entry.name.endsWith("]")
-        ) {
-          const paramName = entry.name.slice(1, -1);
-          const paramValue = reqSegments[index];
-          const newParams = {
-            ...dParams,
-            [paramName]: paramValue,
-          };
-          return getFilePathAndDynamicParams(
-            fileName,
-            withExtension,
-            finalDestination,
-            finalDestination ? lastFound : foundInCurrentPath ?? lastFound,
-            path.join(currentPath, entry.name),
-            index + 1,
-            newParams,
-            accumulative,
-            accumulate
-          );
+        if (entry.isDirectory()) {
+          if (entry.name.startsWith("[...") && entry.name.endsWith("]")) {
+            const paramName = entry.name.slice(4, -1);
+            const paramValue = reqSegments.slice(index);
+            const newParams = {
+              ...dParams,
+              [paramName]: paramValue,
+            };
+            const dynamicPath = path.join(currentPath, entry.name);
+            if (withExtension) {
+              for (const ext of possibleExtensions) {
+                const candidatePath = path.join(
+                  dynamicPath,
+                  `${fileName}${ext}`
+                );
+                if (existsSync(candidatePath)) {
+                  if (accumulative) {
+                    accumulate.push([candidatePath, newParams]);
+                    return accumulate;
+                  }
+                  return [candidatePath, newParams];
+                }
+              }
+            } else {
+              const candidatePath = path.join(dynamicPath, fileName);
+              if (existsSync(candidatePath)) {
+                if (accumulative) {
+                  accumulate.push([candidatePath, newParams]);
+                  return accumulate;
+                }
+                return [candidatePath, newParams];
+              }
+            }
+            if (accumulative) return accumulate;
+            return finalDestination
+              ? []
+              : [foundInCurrentPath ?? lastFound, newParams];
+          } else if (entry.name.startsWith("[") && entry.name.endsWith("]")) {
+            const paramName = entry.name.slice(1, -1);
+            const paramValue = reqSegments[index];
+            const newParams = {
+              ...dParams,
+              [paramName]: paramValue,
+            };
+            return getFilePathAndDynamicParams(
+              fileName,
+              withExtension,
+              finalDestination,
+              finalDestination ? lastFound : foundInCurrentPath ?? lastFound,
+              path.join(currentPath, entry.name),
+              index + 1,
+              newParams,
+              accumulative,
+              accumulate
+            );
+          }
         }
       }
       if (!accumulative)
