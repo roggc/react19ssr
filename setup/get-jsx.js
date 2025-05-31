@@ -317,6 +317,19 @@ function getJSX(reqPath, params) {
               accumulative,
               accumulate
             );
+          } else if (entry.name.startsWith("(") && entry.name.endsWith(")")) {
+            const groupPath = path.join(currentPath, entry.name);
+            return getFilePathAndDynamicParams(
+              fileName,
+              withExtension,
+              finalDestination,
+              lastFound,
+              groupPath,
+              index,
+              dParams,
+              accumulative,
+              accumulate
+            );
           }
         }
       }
@@ -343,22 +356,9 @@ function getJSX(reqPath, params) {
     );
     if (!notFoundPath) {
       jsx = React.createElement(
-        "html",
+        "div",
         null,
-        React.createElement(
-          "head",
-          null,
-          React.createElement("title", null, "404 - Not Found")
-        ),
-        React.createElement(
-          "body",
-          null,
-          React.createElement(
-            "div",
-            null,
-            `Page not found: no "page" file found for "${reqPath}"`
-          )
-        )
+        `Page not found: no "page" file found for "${reqPath}"`
       );
     } else {
       const pageModule = require(notFoundPath);
