@@ -63,6 +63,51 @@ function getJSX(reqPath, params) {
         }
       }
       if (index > reqSegments.length - 1) {
+        const entries = readdirSync(currentPath, { withFileTypes: true });
+        for (const entry of entries) {
+          if (
+            entry.isDirectory() &&
+            entry.name.startsWith("[[...") &&
+            entry.name.endsWith("]]")
+          ) {
+            const paramName = entry.name.slice(5, -2);
+            const paramValue =
+              index < reqSegments.length ? reqSegments.slice(index) : [];
+            const newParams = {
+              ...dParams,
+              [paramName]: paramValue,
+            };
+            const dynamicPath = path.join(currentPath, entry.name);
+            if (withExtension) {
+              for (const ext of possibleExtensions) {
+                const candidatePath = path.join(
+                  dynamicPath,
+                  `${fileName}${ext}`
+                );
+                if (existsSync(candidatePath)) {
+                  if (accumulative) {
+                    accumulate.push([candidatePath, newParams]);
+                    return accumulate;
+                  }
+                  return [candidatePath, newParams];
+                }
+              }
+            } else {
+              const candidatePath = path.join(dynamicPath, fileName);
+              if (existsSync(candidatePath)) {
+                if (accumulative) {
+                  accumulate.push([candidatePath, newParams]);
+                  return accumulate;
+                }
+                return [candidatePath, newParams];
+              }
+            }
+            if (accumulative) return accumulate;
+            return finalDestination
+              ? []
+              : [foundInCurrentPath ?? lastFound, newParams];
+          }
+        }
         if (!accumulative) return finalDestination ? [] : [lastFound, dParams];
         return accumulate;
       }
@@ -84,7 +129,47 @@ function getJSX(reqPath, params) {
       const entries = readdirSync(currentPath, { withFileTypes: true });
       for (const entry of entries) {
         if (entry.isDirectory()) {
-          if (entry.name.startsWith("[...") && entry.name.endsWith("]")) {
+          if (entry.name.startsWith("[[...") && entry.name.endsWith("]]")) {
+            const paramName = entry.name.slice(5, -2);
+            const paramValue =
+              index < reqSegments.length ? reqSegments.slice(index) : [];
+            const newParams = {
+              ...dParams,
+              [paramName]: paramValue,
+            };
+            const dynamicPath = path.join(currentPath, entry.name);
+            if (withExtension) {
+              for (const ext of possibleExtensions) {
+                const candidatePath = path.join(
+                  dynamicPath,
+                  `${fileName}${ext}`
+                );
+                if (existsSync(candidatePath)) {
+                  if (accumulative) {
+                    accumulate.push([candidatePath, newParams]);
+                    return accumulate;
+                  }
+                  return [candidatePath, newParams];
+                }
+              }
+            } else {
+              const candidatePath = path.join(dynamicPath, fileName);
+              if (existsSync(candidatePath)) {
+                if (accumulative) {
+                  accumulate.push([candidatePath, newParams]);
+                  return accumulate;
+                }
+                return [candidatePath, newParams];
+              }
+            }
+            if (accumulative) return accumulate;
+            return finalDestination
+              ? []
+              : [foundInCurrentPath ?? lastFound, newParams];
+          } else if (
+            entry.name.startsWith("[...") &&
+            entry.name.endsWith("]")
+          ) {
             const paramName = entry.name.slice(4, -1);
             const paramValue = reqSegments.slice(index);
             const newParams = {
