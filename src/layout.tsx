@@ -1,13 +1,22 @@
 "use client";
-import React from "react";
+import type { ReactNode } from "react";
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default function Layout({
+  children,
+  sidebar,
+}: {
+  children: ReactNode;
+  sidebar: ReactNode;
+}) {
   return (
     <html lang="en">
       <head>
         <title>react 19 app</title>
       </head>
-      <body>{children}</body>
+      <body>
+        {sidebar}
+        {children}
+      </body>
     </html>
   );
 }

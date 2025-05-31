@@ -18,6 +18,30 @@ function getJSX(reqPath, params) {
     }
   }
   let dynamicParams;
+  function getSlots(currentPath) {
+    const slots = {};
+    const slotFolders = readdirSync(currentPath, {
+      withFileTypes: true,
+    }).filter((entry) => entry.isDirectory() && entry.name.startsWith("@"));
+    for (const slot of slotFolders) {
+      const [slotPath, slotParams] = getFilePathAndDynamicParams(
+        "page",
+        true,
+        true,
+        undefined,
+        path.join(srcFolder, slot.name),
+        reqSegments.length
+      );
+      if (slotPath) {
+        const slotModule = require(slotPath);
+        const Slot = slotModule.default ?? slotModule;
+        slots[slot.name.slice(1)] = React.createElement(Slot, {
+          params: { ...slotParams, ...params },
+        });
+      }
+    }
+    return slots;
+  }
   function getFilePathAndDynamicParams(
     fileName = "page",
     withExtension = true,
@@ -37,11 +61,13 @@ function getJSX(reqPath, params) {
           if (existsSync(candidatePath)) {
             if (index > reqSegments.length - 1) {
               if (!accumulative) return [candidatePath, dParams];
-              accumulate.push([candidatePath, dParams]);
+              const slots = getSlots(currentPath);
+              accumulate.push([candidatePath, dParams, slots]);
               return accumulate;
             }
             if (accumulative) {
-              accumulate.push([candidatePath, dParams]);
+              const slots = getSlots(currentPath);
+              accumulate.push([candidatePath, dParams, slots]);
             } else {
               foundInCurrentPath = candidatePath;
             }
@@ -52,11 +78,13 @@ function getJSX(reqPath, params) {
         if (existsSync(candidatePath)) {
           if (index > reqSegments.length - 1) {
             if (!accumulative) return [candidatePath, dParams];
-            accumulate.push([candidatePath, dParams]);
+            const slots = getSlots(currentPath);
+            accumulate.push([candidatePath, dParams, slots]);
             return accumulate;
           }
           if (accumulative) {
-            accumulate.push([candidatePath, dParams]);
+            const slots = getSlots(currentPath);
+            accumulate.push([candidatePath, dParams, slots]);
           } else {
             foundInCurrentPath = candidatePath;
           }
@@ -83,7 +111,8 @@ function getJSX(reqPath, params) {
                   );
                   if (existsSync(candidatePath)) {
                     if (accumulative) {
-                      accumulate.push([candidatePath, newParams]);
+                      const slots = getSlots(dynamicPath);
+                      accumulate.push([candidatePath, newParams, slots]);
                       return accumulate;
                     }
                     return [candidatePath, newParams];
@@ -93,7 +122,8 @@ function getJSX(reqPath, params) {
                 const candidatePath = path.join(dynamicPath, fileName);
                 if (existsSync(candidatePath)) {
                   if (accumulative) {
-                    accumulate.push([candidatePath, newParams]);
+                    const slots = getSlots(dynamicPath);
+                    accumulate.push([candidatePath, newParams, slots]);
                     return accumulate;
                   }
                   return [candidatePath, newParams];
@@ -123,7 +153,8 @@ function getJSX(reqPath, params) {
                   );
                   if (existsSync(candidatePath)) {
                     if (accumulative) {
-                      accumulate.push([candidatePath, newParams]);
+                      const slots = getSlots(dynamicPath);
+                      accumulate.push([candidatePath, newParams, slots]);
                       return accumulate;
                     }
                     return [candidatePath, newParams];
@@ -133,7 +164,8 @@ function getJSX(reqPath, params) {
                 const candidatePath = path.join(dynamicPath, fileName);
                 if (existsSync(candidatePath)) {
                   if (accumulative) {
-                    accumulate.push([candidatePath, newParams]);
+                    const slots = getSlots(dynamicPath);
+                    accumulate.push([candidatePath, newParams, slots]);
                     return accumulate;
                   }
                   return [candidatePath, newParams];
@@ -184,7 +216,8 @@ function getJSX(reqPath, params) {
                 );
                 if (existsSync(candidatePath)) {
                   if (accumulative) {
-                    accumulate.push([candidatePath, newParams]);
+                    const slots = getSlots(dynamicPath);
+                    accumulate.push([candidatePath, newParams, slots]);
                     return accumulate;
                   }
                   return [candidatePath, newParams];
@@ -194,7 +227,8 @@ function getJSX(reqPath, params) {
               const candidatePath = path.join(dynamicPath, fileName);
               if (existsSync(candidatePath)) {
                 if (accumulative) {
-                  accumulate.push([candidatePath, newParams]);
+                  const slots = getSlots(dynamicPath);
+                  accumulate.push([candidatePath, newParams, slots]);
                   return accumulate;
                 }
                 return [candidatePath, newParams];
@@ -223,7 +257,8 @@ function getJSX(reqPath, params) {
                 );
                 if (existsSync(candidatePath)) {
                   if (accumulative) {
-                    accumulate.push([candidatePath, newParams]);
+                    const slots = getSlots(dynamicPath);
+                    accumulate.push([candidatePath, newParams, slots]);
                     return accumulate;
                   }
                   return [candidatePath, newParams];
@@ -233,7 +268,8 @@ function getJSX(reqPath, params) {
               const candidatePath = path.join(dynamicPath, fileName);
               if (existsSync(candidatePath)) {
                 if (accumulative) {
-                  accumulate.push([candidatePath, newParams]);
+                  const slots = getSlots(dynamicPath);
+                  accumulate.push([candidatePath, newParams, slots]);
                   return accumulate;
                 }
                 return [candidatePath, newParams];
@@ -362,12 +398,12 @@ function getJSX(reqPath, params) {
   );
 
   if (layouts && Array.isArray(layouts)) {
-    for (const [layoutPath, dParams] of layouts.reverse()) {
+    for (const [layoutPath, dParams, slots] of layouts.reverse()) {
       const pageModule = require(layoutPath);
       const Page = pageModule.default ?? pageModule;
       jsx = React.createElement(
         Page,
-        { params: { ...dParams, ...params } },
+        { params: { ...dParams, ...params }, ...slots },
         jsx
       );
     }
