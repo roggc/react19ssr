@@ -41,9 +41,8 @@ function getFilePathAndDynamicParams(
   dParams = {},
   accumulative = false,
   accumulate = [],
-  possibleExtensions = [".tsx", ".jsx", ".js"],
-  isGroup = false,
-  isFound = { value: false }
+  isFound = { value: false },
+  possibleExtensions = [".tsx", ".jsx", ".js"]
 ) {
   let foundInCurrentPath;
   if (index > reqSegments.length - 1 || !finalDestination) {
@@ -52,7 +51,7 @@ function getFilePathAndDynamicParams(
         const candidatePath = path.join(currentPath, `${fileName}${ext}`);
         if (existsSync(candidatePath)) {
           if (index > reqSegments.length - 1) {
-            if (isGroup) isFound.value = true;
+            isFound.value = true;
             if (!accumulative) return [candidatePath, dParams];
             const slots = getSlots(currentPath, reqSegments, params);
             accumulate.push([candidatePath, dParams, slots]);
@@ -70,7 +69,7 @@ function getFilePathAndDynamicParams(
       const candidatePath = path.join(currentPath, fileName);
       if (existsSync(candidatePath)) {
         if (index > reqSegments.length - 1) {
-          if (isGroup) isFound.value = true;
+          isFound.value = true;
           if (!accumulative) return [candidatePath, dParams];
           const slots = getSlots(currentPath, reqSegments, params);
           accumulate.push([candidatePath, dParams, slots]);
@@ -104,7 +103,7 @@ function getFilePathAndDynamicParams(
                   `${fileName}${ext}`
                 );
                 if (existsSync(candidatePath)) {
-                  if (isGroup) isFound.value = true;
+                  isFound.value = true;
                   if (accumulative) {
                     const slots = getSlots(dynamicPath, reqSegments, params);
                     accumulate.push([candidatePath, newParams, slots]);
@@ -116,7 +115,7 @@ function getFilePathAndDynamicParams(
             } else {
               const candidatePath = path.join(dynamicPath, fileName);
               if (existsSync(candidatePath)) {
-                if (isGroup) isFound.value = true;
+                isFound.value = true;
                 if (accumulative) {
                   const slots = getSlots(dynamicPath, reqSegments, params);
                   accumulate.push([candidatePath, newParams, slots]);
@@ -145,7 +144,7 @@ function getFilePathAndDynamicParams(
                   `${fileName}${ext}`
                 );
                 if (existsSync(candidatePath)) {
-                  if (isGroup) isFound.value = true;
+                  isFound.value = true;
                   if (accumulative) {
                     const slots = getSlots(dynamicPath, reqSegments, params);
                     accumulate.push([candidatePath, newParams, slots]);
@@ -157,7 +156,7 @@ function getFilePathAndDynamicParams(
             } else {
               const candidatePath = path.join(dynamicPath, fileName);
               if (existsSync(candidatePath)) {
-                if (isGroup) isFound.value = true;
+                isFound.value = true;
                 if (accumulative) {
                   const slots = getSlots(dynamicPath, reqSegments, params);
                   accumulate.push([candidatePath, newParams, slots]);
@@ -191,8 +190,6 @@ function getFilePathAndDynamicParams(
       dParams,
       accumulative,
       accumulate,
-      possibleExtensions,
-      isGroup,
       isFound
     );
   } else {
@@ -212,7 +209,7 @@ function getFilePathAndDynamicParams(
             for (const ext of possibleExtensions) {
               const candidatePath = path.join(dynamicPath, `${fileName}${ext}`);
               if (existsSync(candidatePath)) {
-                if (isGroup) isFound.value = true;
+                isFound.value = true;
                 if (accumulative) {
                   const slots = getSlots(dynamicPath, reqSegments, params);
                   accumulate.push([candidatePath, newParams, slots]);
@@ -224,7 +221,7 @@ function getFilePathAndDynamicParams(
           } else {
             const candidatePath = path.join(dynamicPath, fileName);
             if (existsSync(candidatePath)) {
-              if (isGroup) isFound.value = true;
+              isFound.value = true;
               if (accumulative) {
                 const slots = getSlots(dynamicPath, reqSegments, params);
                 accumulate.push([candidatePath, newParams, slots]);
@@ -249,7 +246,7 @@ function getFilePathAndDynamicParams(
             for (const ext of possibleExtensions) {
               const candidatePath = path.join(dynamicPath, `${fileName}${ext}`);
               if (existsSync(candidatePath)) {
-                if (isGroup) isFound.value = true;
+                isFound.value = true;
                 if (accumulative) {
                   const slots = getSlots(dynamicPath, reqSegments, params);
                   accumulate.push([candidatePath, newParams, slots]);
@@ -261,7 +258,7 @@ function getFilePathAndDynamicParams(
           } else {
             const candidatePath = path.join(dynamicPath, fileName);
             if (existsSync(candidatePath)) {
-              if (isGroup) isFound.value = true;
+              isFound.value = true;
               if (accumulative) {
                 const slots = getSlots(dynamicPath, reqSegments, params);
                 accumulate.push([candidatePath, newParams, slots]);
@@ -295,8 +292,6 @@ function getFilePathAndDynamicParams(
             newParams,
             accumulative,
             accumulate,
-            possibleExtensions,
-            isGroup,
             isFound
           );
         } else if (entry.name.startsWith("[") && entry.name.endsWith("]")) {
@@ -319,8 +314,6 @@ function getFilePathAndDynamicParams(
             newParams,
             accumulative,
             accumulate,
-            possibleExtensions,
-            isGroup,
             isFound
           );
         } else if (entry.name.startsWith("(") && entry.name.endsWith(")")) {
@@ -338,12 +331,10 @@ function getFilePathAndDynamicParams(
             dParams,
             accumulative,
             accumulate,
-            possibleExtensions,
-            true,
             newIsFound
           );
           if (newIsFound.value) {
-            if (isGroup) isFound.value = true;
+            isFound.value = true;
             return result;
           }
         }
